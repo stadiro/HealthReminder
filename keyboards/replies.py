@@ -1,5 +1,5 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
-from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder, InlineKeyboardButton
 from aiogram.filters.callback_data import CallbackData
 
 class MyCallback(CallbackData, prefix="my"):
@@ -8,22 +8,34 @@ class MyCallback(CallbackData, prefix="my"):
 
 def start_kb():
     builder = InlineKeyboardBuilder()
-    builder.button(
-        text="Создать напоминание",
-        callback_data=MyCallback(name="create")
+    builder.row(
+        InlineKeyboardButton(text="Создать напоминание ⏰", callback_data=MyCallback(name="create").pack())
     )
     return builder.as_markup()
 
 
 def create_kb():
     builder = InlineKeyboardBuilder()
-    builder.button(
-        text="Запись ко врачу",
-        callback_data=MyCallback(name="doctor")
+    builder.row(
+        InlineKeyboardButton(text="Запись ко врачу 🏥", callback_data=MyCallback(name="doctor").pack()),
+        InlineKeyboardButton(text="Прием лекарств 💊", callback_data=MyCallback(name="pills").pack()),
     )
-    builder.button(
-        text="Прием лекарств",
-        callback_data=MyCallback(name="pills")
+    return builder.adjust(1).as_markup()
+
+
+def back_cancel_kb():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="Назад ⬅️", callback_data=MyCallback(name="back").pack()),
+        InlineKeyboardButton(text="Отмена ↩️", callback_data=MyCallback(name="cancel").pack()),
+    )
+    return builder.as_markup()
+
+
+def cancel_kb():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="Отмена ↩️", callback_data=MyCallback(name="cancel").pack()),
     )
     return builder.as_markup()
 
