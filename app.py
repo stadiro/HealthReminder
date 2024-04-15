@@ -20,7 +20,7 @@ async def main():
     await bot.delete_webhook(drop_pending_updates=True)  # скипать сообщения полученные в оффлайне
     await bot.set_my_commands(commands=private, scope=types.BotCommandScopeAllPrivateChats())  # кнопка меню
     # await bot.delete_my_commands(scope=types.BotCommandScopeAllPrivateChats())  # удалить кнопку меню
-    await dp.start_polling(bot, allowed_updates=["message, edited_message"])  # полинг сообщений
+    await dp.start_polling(bot)  # полинг сообщений
 
 
 asyncio.run(main())

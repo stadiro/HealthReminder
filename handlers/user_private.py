@@ -1,8 +1,12 @@
 from aiogram import F, types, Router
 from aiogram.filters import CommandStart, Command, or_f, StateFilter
-from aiogram.filters.callback_data import CallbackQuery
+from aiogram.filters.callback_data import CallbackQuery, CallbackData
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
+from datetime import datetime
+from aiogram_calendar.common import get_user_locale
+from aiogram_calendar.simple_calendar import SimpleCalendar
+from aiogram_calendar.schemas import SimpleCalendarCallback
 
 
 from keyboards import replies
@@ -13,6 +17,7 @@ user_private_router = Router()
 class AddReminderDoctor(StatesGroup):
     speciality = State()
     name_clinic = State()
+    date = State()
     time = State()
     cabinet = State()
     extra_inf_doctor = State()
@@ -20,7 +25,8 @@ class AddReminderDoctor(StatesGroup):
     texts = {
         'AddReminderDoctor:speciality': '🩺Введите специальность врача',
         'AddReminderDoctor:name_clinic': '🏥Введите название поликлиники',
-        'AddReminderDoctor:time': '🕒Укажите день и время приёма',
+        'AddReminderDoctor:date': '🕒Укажите день приёма',
+        'AddReminderDoctor:time': '🕒Укажите время приёма',
         'AddReminderDoctor:cabinet': '🚪Укажите кабинет врача',
         'AddReminderDoctor:extra_inf_doctor': 'ℹ️Введите дополнительную информацию\nЗдесь вы можете указать ФИО врача,'
         'адрес поликлиники, и прочую информацию'
@@ -137,8 +143,9 @@ async def pill_name_err(message: types.Message):
 @user_private_router.message(StateFilter(AddReminderDoctor.name_clinic), F.text)
 async def doctor_clinic(message: types.Message, state: FSMContext):
     await state.update_data(name_clinic=message.text)
-    await message.answer("🕒Укажите день и время приёма", reply_markup=replies.back_cancel_kb())
-    await state.set_state(AddReminderDoctor.time)
+    await message.answer("🕒Укажите день приёма",
+                         reply_markup=await SimpleCalendar(locale=await get_user_locale(message.from_user)).start_calendar())
+    await state.set_state(AddReminderDoctor.date)
 
 
 @user_private_router.message(AddReminderDoctor.name_clinic)
@@ -146,21 +153,36 @@ async def pill_name_err(message: types.Message):
     await message.answer("❗Некорректный ввод данных\nУкажите <i>текстом</i>", reply_markup=replies.back_cancel_kb())
 
 
-@user_private_router.message(StateFilter(AddReminderDoctor.time), F.text)
-async def doctor_time(message: types.Message, state: FSMContext):
-    await state.update_data(time=message.text)
-    await message.answer("🚪Укажите кабинет врача", reply_markup=replies.back_cancel_kb())
-    await state.set_state(AddReminderDoctor.cabinet)
+@user_private_router.callback_query(StateFilter(AddReminderDoctor.date), SimpleCalendarCallback.filter())
+async def doctor_date(query: CallbackQuery, callback_data: SimpleCalendarCallback, state: FSMContext):
+    calendar = SimpleCalendar(
+        locale=await get_user_locale(query.from_user), show_alerts=True
+    )
+    calendar.set_dates_range(datetime(2022, 1, 1), datetime(2025, 12, 31))
+    selected, date = await calendar.process_selection(query, callback_data)
+    if selected:
+        await query.message.answer(f'❗<b>Вы указали {date.strftime(f"%d.%m.%Y")}</b>')
+        await state.update_data(date=date.strftime(f"%d/%m/%Y"))
+        await query.message.answer("🚪Укажите кабинет врача", reply_markup=replies.back_cancel_kb())
+        await state.set_state(AddReminderDoctor.cabinet)
+    '''elif callback_data.act == SimpleCalAct.cancel:
+        cur_state = await state.get_state()
+        if cur_state is None:
+            return
+        await state.clear()
+        await query.message.edit_text("❗️<b>Действия отменены</b>", reply_markup=replies.start_kb())
+        await query.answer("❗️ Действия отменены ❗️")'''
 
 
-@user_private_router.message(AddReminderDoctor.time)
+
+@user_private_router.message(AddReminderDoctor.date)
 async def pill_name_err(message: types.Message):
-    await message.answer("❗Некорректный ввод данных\nУкажите <i>текстом</i>", reply_markup=replies.back_cancel_kb())
+    await message.answer("❗Некорректный ввод данных\nВыберите дату <i>на календаре</i>", reply_markup=replies.back_cancel_kb())
 
 
 @user_private_router.message(StateFilter(AddReminderDoctor.cabinet), F.text)
 async def doctor_cabinet(message: types.Message, state: FSMContext):
-    await state.update_data(time=message.text)
+    await state.update_data(cabinet=message.text)
     await message.answer(
         "ℹ️Введите дополнительную информацию\nЗдесь вы можете указать ФИО врача, адрес поликлиники"
         ", и прочую информацию", reply_markup=replies.back_cancel_kb())
@@ -235,7 +257,7 @@ async def pill_freq_err(message: types.Message):
     await message.answer("❗Некорректный ввод данных\nУкажите текстом ", reply_markup=replies.back_cancel_kb())
 
 
-@user_private_router.message(F.text)  # магический фильтр ловит текст
+@user_private_router.message()  # магический фильтр ловит текст
 async def stuff(message: types.Message):
-    await message.answer("Мага фффффффффффф")
+    await message.answer("Мага фффффффффффффффф")
 
