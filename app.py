@@ -12,6 +12,8 @@ load_dotenv(find_dotenv())
 
 
 bot = Bot(token=os.getenv('TOKEN'), default=DefaultBotProperties(parse_mode=ParseMode.HTML))  # токен ботика
+
+
 dp = Dispatcher()  # диспатчер
 dp.include_routers(user_private_router)  # включение роутера
 

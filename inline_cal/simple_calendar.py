@@ -1,14 +1,13 @@
 import calendar
-import sys
 from datetime import datetime, timedelta
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types import CallbackQuery
 
+
 from .schemas import SimpleCalendarCallback, SimpleCalAct, highlight, superscript
 from .common import GenericCalendar
 
-sys.path.append("D:\bot\ts1\keyboards")
 
 from keyboards import replies
 
@@ -119,13 +118,12 @@ class SimpleCalendar(GenericCalendar):
         # nav today & cancel button
         cancel_row = []
         cancel_row.append(InlineKeyboardButton(
-            text="Отмена",
-            callback_data=SimpleCalendarCallback(act=SimpleCalAct.cancel, year=year, month=month, day=day).pack()
+            text="Назад ⬅️",
+            callback_data=SimpleCalendarCallback(act=SimpleCalAct.back, year=year, month=month, day=day).pack()
         ))
-        cancel_row.append(InlineKeyboardButton(text=" ", callback_data=self.ignore_callback))
         cancel_row.append(InlineKeyboardButton(
-            text="Сегодня",
-            callback_data=SimpleCalendarCallback(act=SimpleCalAct.today, year=year, month=month, day=day).pack()
+            text="Отмена ↩️",
+            callback_data=SimpleCalendarCallback(act=SimpleCalAct.cancel, year=year, month=month, day=day).pack()
         ))
         kb.append(cancel_row)
         return InlineKeyboardMarkup(row_width=7, inline_keyboard=kb)
@@ -173,14 +171,13 @@ class SimpleCalendar(GenericCalendar):
         if data.act == SimpleCalAct.next_m:
             next_date = temp_date + timedelta(days=31)
             await self._update_calendar(query, next_date)
-        if data.act == SimpleCalAct.today:
-            next_date = datetime.now()
-            if next_date.year != int(data.year) or next_date.month != int(data.month):
-                await self._update_calendar(query, datetime.now())
-            else:
-                await query.answer(cache_time=60)
+        if data.act == SimpleCalAct.back:
+            await query.message.delete_reply_markup()
+            await query.message.answer("❗️Предыдущего шага нет.️\n Введите название или нажмите \"Отмена\"",
+                                       reply_markup=replies.back_cancel_kb())
         if data.act == SimpleCalAct.cancel:
             await query.message.delete_reply_markup()
             await query.message.answer("❗️Предыдущего шага нет.️\n Введите название или нажмите \"Отмена\"", reply_markup=replies.back_cancel_kb())
         # at some point user clicks DAY button, returning date
         return return_data
+
