@@ -125,37 +125,37 @@ async def send_current(bot: Bot, session: AsyncSession):
                                                     time6 = pl_rm.six_take.strftime(f"%H:%M")
                             if pl_rm.freq_per_day == 1:
                                 await bot.send_message(chat_id=int(ch_id), text=f"🔔<strong>Пора принимать лекарство🔔\n\n"
-                                           f"<strong>💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
+                                           f"💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
                                            f" на протяжении {pl_rm.freq_days} дней начиная с {date}</strong>"
                                            f"\n⏰Время приема:\n1. {time1}"
                                            f"\nℹ️Дополнительная информация: {pl_rm.extra_inf}")
                             elif pl_rm.freq_per_day == 2:
                                 await bot.send_message(chat_id=int(ch_id), text=f"🔔<strong>Пора принимать лекарство🔔\n\n"
-                                           f"<strong>💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
+                                           f"💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
                                            f" на протяжении {pl_rm.freq_days} дней начиная с {date}</strong>"
                                            f"\n⏰Время приема:\n1. {time1}\n2. {time2}"
                                            f"\nℹ️Дополнительная информация: {pl_rm.extra_inf}")
                             elif pl_rm.freq_per_day == 3:
                                 await bot.send_message(chat_id=int(ch_id), text=f"🔔<strong>Пора принимать лекарство🔔\n\n"
-                                           f"<strong>💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
+                                           f"💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
                                            f" на протяжении {pl_rm.freq_days} дней начиная с {date}</strong>"
                                            f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}"
                                            f"\nℹ️Дополнительная информация: {pl_rm.extra_inf}")
                             elif pl_rm.freq_per_day == 4:
                                 await bot.send_message(chat_id=int(ch_id), text=f"🔔<strong>Пора принимать лекарство🔔\n\n"
-                                           f"<strong>💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
+                                           f"💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
                                            f" на протяжении {pl_rm.freq_days} дней начиная с {date}</strong>"
                                            f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}"
                                            f"\nℹ️Дополнительная информация: {pl_rm.extra_inf}")
                             elif pl_rm.freq_per_day == 5:
                                 await bot.send_message(chat_id=int(ch_id), text=f"🔔<strong>Пора принимать лекарство🔔\n\n"
-                                           f"<strong>💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
+                                           f"💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
                                            f" на протяжении {pl_rm.freq_days} дней начиная с {date}</strong>"
                                            f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}\n5. {time5}"
                                            f"\nℹ️Дополнительная информация: {pl_rm.extra_inf}")
                             elif pl_rm.freq_per_day == 6:
                                 await bot.send_message(chat_id=int(ch_id), text=f"🔔<strong>Пора принимать лекарство🔔\n\n"
-                                           f"<strong>💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
+                                           f"💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
                                            f" на протяжении {pl_rm.freq_days} дней начиная с {date}</strong>"
                                            f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}\n5. {time5}\n6. {time6}"
                                            f"\nℹ️Дополнительная информация: {pl_rm.extra_inf}")
@@ -380,10 +380,7 @@ async def skip(query: CallbackQuery, state: FSMContext, session: AsyncSession):
                     await state.update_data(four_take=None)
                     await state.update_data(five_take=None)
                     await state.update_data(six_take=None)
-            await query.message.answer(str(data))
-            await query.message.answer(str(len(takes_time)))
             data1 = await state.get_data()
-            await query.message.answer(str(data1))
             await orm_pills_remind(session, data1)
             await query.message.answer("✅Напоминание добавлено\n\n🔔Напоминания будут приходить в указанное время\n\n"
                              "❕Уведомления приходят по (UTC/GMT +05:00) Asia/Yekaterinburg",
