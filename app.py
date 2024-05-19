@@ -3,7 +3,10 @@ import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.enums import ParseMode
 from aiogram.client.bot import DefaultBotProperties
+from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime
 
+from database.orm_query import orm_get_reminds_all, orm_get_remind_doctor
 from handlers.user_private import user_private_router  # роутер из юзер_приват
 from common.bot_cmd_list import private  # список команд
 
@@ -35,7 +38,6 @@ async def on_shutdown(bot):
 async def main():
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
-
     dp.update.middleware(DataBaseSession(session_pool=session_maker))
 
     await bot.delete_webhook(drop_pending_updates=True)  # скипать сообщения полученные в оффлайне

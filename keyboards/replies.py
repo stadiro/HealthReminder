@@ -1,6 +1,7 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 from aiogram.filters.callback_data import CallbackData
 
+
 class MyCallback(CallbackData, prefix="my"):
     name: str
 
@@ -10,7 +11,6 @@ def start_kb():
     builder.row(
         InlineKeyboardButton(text="Создать напоминание ⏰", callback_data=MyCallback(name="create").pack()),
         InlineKeyboardButton(text="Просмотр напоминаний 📚", callback_data=MyCallback(name="look").pack()),
-        InlineKeyboardButton(text="Указать часовой пояс ⏱", callback_data=MyCallback(name="timezone").pack()),
     )
     return builder.adjust(1).as_markup()
 
@@ -70,16 +70,3 @@ def get_btns(
     for text, data in btns.items():
         keyboard.add(InlineKeyboardButton(text=text, callback_data=data))
     return keyboard.adjust(*sizes).as_markup()
-
-
-def del_or_update_kb():
-    builder = InlineKeyboardBuilder()
-    builder.row(
-        InlineKeyboardButton(text="Изменить 🖋", callback_data=MyCallback(name="cancel").pack()),
-        InlineKeyboardButton(text="Удалить 🚮", callback_data=MyCallback(name="cancel").pack()),
-    )
-    return builder.as_markup()
-
-
-class TimeCallback(CallbackData, prefix="my"):
-    name: str
