@@ -3,10 +3,7 @@ import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.enums import ParseMode
 from aiogram.client.bot import DefaultBotProperties
-from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
 
-from database.orm_query import orm_get_reminds_all, orm_get_remind_doctor
 from handlers.user_private import user_private_router  # роутер из юзер_приват
 from common.bot_cmd_list import private  # список команд
 
@@ -23,7 +20,7 @@ dp = Dispatcher()  # диспатчер
 dp.include_routers(user_private_router)  # включение роутера
 
 
-async def on_startup(bot):
+async def on_startup():
     run_param = False
     if run_param:
         await drop_db()
@@ -31,7 +28,7 @@ async def on_startup(bot):
     await create_db()
 
 
-async def on_shutdown(bot):
+async def on_shutdown():
     print("бот прилег")
 
 

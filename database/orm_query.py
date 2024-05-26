@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, delete
 from database.models import DoctorRemind, PillsRemind, AllRemind, PKTable
 from datetime import datetime, timedelta
 

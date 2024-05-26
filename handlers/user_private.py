@@ -193,7 +193,7 @@ async def back_to_start(query: CallbackQuery):
 
 
 @user_private_router.callback_query(SimpleCalendarCallback.filter(F.act == SimpleCalAct.cancel))
-async def process_selection(query: CallbackQuery, state: FSMContext) -> None:
+async def calendar_cancel(query: CallbackQuery, state: FSMContext) -> None:
     cur_state = await state.get_state()
     if cur_state is None:
         return
@@ -203,7 +203,7 @@ async def process_selection(query: CallbackQuery, state: FSMContext) -> None:
 
 
 @user_private_router.callback_query(SimpleCalendarCallback.filter(F.act == SimpleCalAct.back))
-async def process_selection(query: CallbackQuery, state: FSMContext) -> None:
+async def calendar_back(query: CallbackQuery, state: FSMContext) -> None:
     cur_state = await state.get_state()
     if cur_state in AddReminderDoctor.__all_states__:
         prev = None
@@ -517,7 +517,7 @@ async def doctor_spec(message: types.Message, state: FSMContext):
 
 
 @user_private_router.message(AddReminderDoctor.speciality)
-async def pill_name_err(message: types.Message):
+async def doctor_spec_err(message: types.Message):
     await message.answer("❗Некорректный ввод данных\nУкажите <i>текстом</i>", reply_markup=replies.cancel_kb())
 
 
@@ -530,7 +530,7 @@ async def doctor_clinic(message: types.Message, state: FSMContext):
 
 
 @user_private_router.message(AddReminderDoctor.name_clinic)
-async def pill_name_err(message: types.Message):
+async def doctor_clinic_err(message: types.Message):
     await message.answer("❗Некорректный ввод данных\nУкажите <i>текстом</i>", reply_markup=replies.back_cancel_kb())
 
 
@@ -562,7 +562,7 @@ async def doctor_date_err(message: types.Message):
 
 
 @user_private_router.message(StateFilter(AddReminderDoctor.time), F.text)
-async def doctor_cabinet(message: types.Message, state: FSMContext):
+async def doctor_time(message: types.Message, state: FSMContext):
     message_text = message.text
     if len(message_text) <= 2:
         message_text = message_text.zfill(4)
@@ -630,7 +630,7 @@ async def doctor_cabinet(message: types.Message, state: FSMContext):
 
 
 @user_private_router.message(AddReminderDoctor.time)
-async def pill_name_err(message: types.Message):
+async def doctor_time_err(message: types.Message):
     await message.answer("❗Некорректный ввод данных\nУкажите <b>в необходимом формате</b>", reply_markup=replies.back_cancel_kb())
 
 
@@ -696,7 +696,7 @@ async def pill_name_err(message: types.Message):
 
 
 @user_private_router.message(AddReminderPills.freq_days, F.text)
-async def pill_day_start(message: types.Message, state: FSMContext):
+async def pill_freq_days(message: types.Message, state: FSMContext):
     mess = message.text
     if mess.isdigit():
         if 0 < int(mess) <= 7:
@@ -713,7 +713,7 @@ async def pill_day_start(message: types.Message, state: FSMContext):
 
 
 @user_private_router.message(AddReminderPills.freq_days)
-async def pill_day_start_err(message: types.Message):
+async def pill_freq_days_err(message: types.Message):
     await message.answer("❗Некорректный ввод данных\nУкажите количество <i>целым положительным числом</i>",
                          reply_markup=replies.cancel_kb())
 
@@ -874,7 +874,7 @@ async def pill_sec_take_err(message: types.Message):
 
 
 @user_private_router.message(AddReminderPills.third_take, F.text)
-async def pill_sec_take(message: types.Message, state: FSMContext):
+async def pill_third_take(message: types.Message, state: FSMContext):
     message_text = message.text
     if len(message_text) <= 2:
         message_text = message_text.zfill(4)
@@ -925,13 +925,13 @@ async def pill_sec_take(message: types.Message, state: FSMContext):
 
 
 @user_private_router.message(AddReminderPills.third_take)
-async def pill_sec_take_err(message: types.Message):
+async def pill_third_take_err(message: types.Message):
     await message.answer("❗Некорректный ввод данных\nУкажите <i>в необходимом формате</i>",
                          reply_markup=replies.back_cancel_kb())
 
 
 @user_private_router.message(AddReminderPills.four_take, F.text)
-async def pill_sec_take(message: types.Message, state: FSMContext):
+async def pill_four_take(message: types.Message, state: FSMContext):
     message_text = message.text
     if len(message_text) <= 2:
         message_text = message_text.zfill(4)
@@ -982,13 +982,13 @@ async def pill_sec_take(message: types.Message, state: FSMContext):
 
 
 @user_private_router.message(AddReminderPills.four_take)
-async def pill_sec_take_err(message: types.Message):
+async def pill_four_take_err(message: types.Message):
     await message.answer("❗Некорректный ввод данных\nУкажите <i>в необходимом формате</i>",
                          reply_markup=replies.back_cancel_kb())
 
 
 @user_private_router.message(AddReminderPills.five_take, F.text)
-async def pill_sec_take(message: types.Message, state: FSMContext):
+async def pill_five_take(message: types.Message, state: FSMContext):
     message_text = message.text
     if len(message_text) <= 2:
         message_text = message_text.zfill(5)
@@ -1039,13 +1039,13 @@ async def pill_sec_take(message: types.Message, state: FSMContext):
 
 
 @user_private_router.message(AddReminderPills.five_take)
-async def pill_sec_take_err(message: types.Message):
+async def pill_five_take_err(message: types.Message):
     await message.answer("❗Некорректный ввод данных\nУкажите <i>в необходимом формате</i> ",
                          reply_markup=replies.back_cancel_kb())
 
 
 @user_private_router.message(AddReminderPills.six_take, F.text)
-async def pill_sec_take(message: types.Message, state: FSMContext):
+async def pill_six_take(message: types.Message, state: FSMContext):
     message_text = message.text
     if len(message_text) <= 2:
         message_text = message_text.zfill(5)
@@ -1091,7 +1091,7 @@ async def pill_sec_take(message: types.Message, state: FSMContext):
 
 
 @user_private_router.message(AddReminderPills.six_take)
-async def pill_sec_take_err(message: types.Message):
+async def pill_six_take_err(message: types.Message):
     await message.answer("❗Некорректный ввод данных\nУкажите <i>в необходимом формате</i> ",
                          reply_markup=replies.back_cancel_kb())
 
