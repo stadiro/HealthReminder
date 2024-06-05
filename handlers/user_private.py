@@ -78,7 +78,6 @@ class AddReminderPills(StatesGroup):
 
 
 async def send_current(bot: Bot, session: AsyncSession):
-
     print('start stream....')
 
     while True:
@@ -413,7 +412,7 @@ async def skip(query: CallbackQuery, state: FSMContext, session: AsyncSession):
 async def reminds_list(query: CallbackQuery, session: AsyncSession):
     await query.message.delete()
     await query.message.answer("❕Список напоминаний, в случае их наличия, будет представлен ниже. ")
-    await query.answer("📋Список напоминаний\n\n❕Для изменения или удаления напоминания нажмите на кнопку")
+    await query.answer("📋Список напоминаний⬆\n\n❕Для изменения или удаления напоминания нажмите на кнопку")
     for remind in await orm_get_reminds_doctor(session):
         if int(remind.chat_id) == query.message.chat.id:
             date = remind.date.strftime(f"%d.%m.%Y")
@@ -479,7 +478,7 @@ async def reminds_list(query: CallbackQuery, session: AsyncSession):
                                            f"\nℹ️Дополнительная информация: {remind.extra_inf}",
                                            reply_markup=replies.get_btns(btns={
                                                'Удалить 🚮': f'delete_{remind.id}'}))
-    await query.message.answer("❗Список напоминаний\n\n📝Для удаления напоминания нажмите на кнопку"
+    await query.message.answer("❗Список напоминаний⬆️\n\n📝Для удаления напоминания нажмите на кнопку"
                                "\n\n❕Уведомления приходят по (UTC/GMT +05:00) Asia/Yekaterinburg",
                                reply_markup=replies.back_only_for_look_kb())
 

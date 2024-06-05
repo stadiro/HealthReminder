@@ -15,7 +15,6 @@ from database.engine import create_db, drop_db, session_maker
 
 bot = Bot(token=os.getenv('TOKEN'), default=DefaultBotProperties(parse_mode=ParseMode.HTML))  # токен ботика
 
-
 dp = Dispatcher()  # диспатчер
 dp.include_routers(user_private_router)  # включение роутера
 
