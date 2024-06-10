@@ -73,7 +73,9 @@ class AddReminderPills(StatesGroup):
         'AddReminderPills:four_take': '<b>Укажите время 4 приема</b>',
         'AddReminderPills:five_take': '<b>Укажите время 5 приема</b>',
         'AddReminderPills:six_take': '<b>Укажите время 6 приема</b>',
-        'AddReminderPills:extra_inf': 'ℹ️<b>Введите дополнительную информацию</b>',
+        'AddReminderPills:extra_inf': 'ℹ️<b>Введите дополнительную информацию</b>\n\n'
+                                         'Здесь вы можете указать дозировку препарата, то, как его принимать и прочую'
+                                         ' информацию'
     }
 
 
@@ -411,7 +413,6 @@ async def skip(query: CallbackQuery, state: FSMContext, session: AsyncSession):
 @user_private_router.callback_query(StateFilter('*'), MyCallback.filter(F.name == "look"))
 async def reminds_list(query: CallbackQuery, session: AsyncSession):
     await query.message.delete()
-    await query.message.answer("❕Список напоминаний, в случае их наличия, будет представлен ниже. ")
     await query.answer("📋Список напоминаний⬆\n\n❕Для изменения или удаления напоминания нажмите на кнопку")
     for remind in await orm_get_reminds_doctor(session):
         if int(remind.chat_id) == query.message.chat.id:
@@ -440,7 +441,7 @@ async def reminds_list(query: CallbackQuery, session: AsyncSession):
             if remind.freq_per_day == 1:
                 await query.message.answer(f"<strong>💊Препарат: {remind.name}\n📋Прием {remind.freq_per_day} раз в день"
                                            f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
-                                           f"\n⏰Время приема:\n1. {time1}ℹ️Дополнительная информация: \n{remind.extra_inf}",
+                                           f"\n⏰Время приема:\n1. {time1}\nℹ️Дополнительная информация: {remind.extra_inf}",
                                            reply_markup=replies.get_btns(btns={
                                                'Удалить 🚮': f'delete_{remind.id}'}))
             elif remind.freq_per_day == 2:
@@ -478,7 +479,8 @@ async def reminds_list(query: CallbackQuery, session: AsyncSession):
                                            f"\nℹ️Дополнительная информация: {remind.extra_inf}",
                                            reply_markup=replies.get_btns(btns={
                                                'Удалить 🚮': f'delete_{remind.id}'}))
-    await query.message.answer("❗Список напоминаний⬆️\n\n📝Для удаления напоминания нажмите на кнопку"
+    await query.message.answer("❗Список напоминаний, в случае их наличия, представлен выше⬆️"
+                               "\n\n📝Для удаления напоминания нажмите на кнопку"
                                "\n\n❕Уведомления приходят по (UTC/GMT +05:00) Asia/Yekaterinburg",
                                reply_markup=replies.back_only_for_look_kb())
 
@@ -487,7 +489,7 @@ async def reminds_list(query: CallbackQuery, session: AsyncSession):
 async def delete_remind(query: types.CallbackQuery, session: AsyncSession):
     remind_id = query.data.split("_")[-1]
     await orm_delete_remind(session, int(remind_id))
-    await query.message.answer("❗Напоминание удалено", reply_markup=replies.start_kb())
+    await query.message.edit_text("❗Напоминание удалено", reply_markup=replies.start_kb())
     await query.answer("❗Напоминание удалено")
 
 
@@ -510,9 +512,13 @@ async def doctor(query: CallbackQuery, state: FSMContext):
 
 @user_private_router.message(StateFilter(AddReminderDoctor.speciality), F.text)
 async def doctor_spec(message: types.Message, state: FSMContext):
-    await state.update_data(speciality=message.text)
-    await message.answer("🏥<b>Введите название поликлиники</b>", reply_markup=replies.back_cancel_kb())
-    await state.set_state(AddReminderDoctor.name_clinic)
+    if len(message.text) <= 100:
+        await state.update_data(speciality=message.text)
+        await message.answer("🏥<b>Введите название поликлиники</b>", reply_markup=replies.back_cancel_kb())
+        await state.set_state(AddReminderDoctor.name_clinic)
+    else:
+        await message.answer("❗Длина текста сообщения не может быть больше 100 символов"
+                             "\n\n Введите текст заново")
 
 
 @user_private_router.message(AddReminderDoctor.speciality)
@@ -522,10 +528,14 @@ async def doctor_spec_err(message: types.Message):
 
 @user_private_router.message(StateFilter(AddReminderDoctor.name_clinic), F.text)
 async def doctor_clinic(message: types.Message, state: FSMContext):
-    await state.update_data(name_clinic=message.text)
-    await message.answer("🗓<b>Укажите день приёма</b>",
-                         reply_markup=await SimpleCalendar(locale='ru_Ru').start_calendar())
-    await state.set_state(AddReminderDoctor.date)
+    if len(message.text) <= 100:
+        await state.update_data(name_clinic=message.text)
+        await message.answer("🗓<b>Укажите день приёма</b>",
+                             reply_markup=await SimpleCalendar(locale='ru_Ru').start_calendar())
+        await state.set_state(AddReminderDoctor.date)
+    else:
+        await message.answer("❗Длина текста сообщения не может быть больше 100 символов"
+                             "\n\n Введите текст заново")
 
 
 @user_private_router.message(AddReminderDoctor.name_clinic)
@@ -635,11 +645,15 @@ async def doctor_time_err(message: types.Message):
 
 @user_private_router.message(StateFilter(AddReminderDoctor.cabinet), F.text)
 async def doctor_cabinet(message: types.Message, state: FSMContext):
-    await state.update_data(cabinet=message.text)
-    await message.answer(
-        "ℹ️<b>Введите дополнительную информацию</b>\n\nЗдесь вы можете указать ФИО врача, адрес поликлиники"
-        ", и прочую информацию", reply_markup=replies.skip_bk_cl_kb())
-    await state.set_state(AddReminderDoctor.extra_inf_doctor)
+    if len(message.text) <= 100:
+        await state.update_data(cabinet=message.text)
+        await message.answer(
+            "ℹ️<b>Введите дополнительную информацию</b>\n\nЗдесь вы можете указать ФИО врача, адрес поликлиники"
+            ", и прочую информацию", reply_markup=replies.skip_bk_cl_kb())
+        await state.set_state(AddReminderDoctor.extra_inf_doctor)
+    else:
+        await message.answer("❗Длина текста сообщения не может быть больше 100 символов"
+                             "\n\n Введите текст заново")
 
 
 @user_private_router.message(AddReminderDoctor.cabinet)
@@ -649,20 +663,23 @@ async def doctor_cabinet_err(message: types.Message):
 
 @user_private_router.message(StateFilter(AddReminderDoctor.extra_inf_doctor), F.text)
 async def doctor_extra(message: types.Message, state: FSMContext, session: AsyncSession):
-
-    await state.update_data(extra_inf_doctor=message.text)
-    try:
-        await state.update_data(chat_id=str(message.chat.id))
-        data = await state.get_data()
-        await orm_doctor_remind(session, data)
-        await message.answer("✅<b>Напоминание добавлено</b>\n\n🔔Вам придет уведомление за 24 часа, за 1 час и в "
-                             "момент начала приема\n\n❕Уведомления приходят по (UTC/GMT +05:00) "
-                             "Asia/Yekaterinburg", reply_markup=replies.start_kb())
-        await state.clear()
-    except Exception as e:
-        await message.answer(f"Ошибка: \n{str(e)}\n Информация не может быть загружена в базу данных",
-                             reply_markup=replies.start_kb())
-        await state.clear()
+    if len(message.text) <= 250:
+        await state.update_data(extra_inf_doctor=message.text)
+        try:
+            await state.update_data(chat_id=str(message.chat.id))
+            data = await state.get_data()
+            await orm_doctor_remind(session, data)
+            await message.answer("✅<b>Напоминание добавлено</b>\n\n🔔Вам придет уведомление за 24 часа, за 1 час и в "
+                                 "момент начала приема\n\n❕Уведомления приходят по (UTC/GMT +05:00) "
+                                 "Asia/Yekaterinburg", reply_markup=replies.start_kb())
+            await state.clear()
+        except Exception as e:
+            await message.answer(f"Ошибка: \n{str(e)}\n Информация не может быть загружена в базу данных",
+                                 reply_markup=replies.start_kb())
+            await state.clear()
+    else:
+        await message.answer("❗Длина текста сообщения не может быть больше 250 символов"
+                             "\n\n Введите текст заново")
 
 
 @user_private_router.message(AddReminderDoctor.extra_inf_doctor)
@@ -684,9 +701,13 @@ async def pills(query: CallbackQuery, state: FSMContext):
 
 @user_private_router.message(AddReminderPills.name, F.text)
 async def pill_name(message: types.Message, state: FSMContext):
-    await state.update_data(name=message.text)
-    await message.answer("🗓️<b>Сколько дней нужно принимать лекарство</b>", reply_markup=replies.back_cancel_kb())
-    await state.set_state(AddReminderPills.freq_days)
+    if len(message.text) <= 100:
+        await state.update_data(name=message.text)
+        await message.answer("🗓️<b>Сколько дней нужно принимать лекарство</b>", reply_markup=replies.back_cancel_kb())
+        await state.set_state(AddReminderPills.freq_days)
+    else:
+        await message.answer("❗Длина текста сообщения не может быть больше 100 символов"
+                             "\n\n Введите текст заново")
 
 
 @user_private_router.message(AddReminderPills.name)
@@ -800,7 +821,9 @@ async def pill_first_take(message: types.Message, state: FSMContext):
                     await message.answer("2️⃣<b>Укажите время 2 приема</b>", reply_markup=replies.back_cancel_kb())
                     await state.set_state(AddReminderPills.sec_take)
                 else:
-                    await message.answer("ℹ️<b>Введите дополнительную информацию</b>", reply_markup=replies.skip_bk_cl_kb())
+                    await message.answer("ℹ️<b>Введите дополнительную информацию</b>\n\n"
+                                         "Здесь вы можете указать дозировку препарата, то, как его принимать и прочую"
+                                         " информацию", reply_markup=replies.skip_bk_cl_kb())
                     await state.set_state(AddReminderPills.extra_inf)
         else:
             await message.answer("❗Некорректный ввод данных\nУкажите <i>в необходимом формате</i> ",
@@ -853,7 +876,9 @@ async def pill_sec_take(message: types.Message, state: FSMContext):
                         await message.answer("3️⃣<b>Укажите время 3 приема</b>", reply_markup=replies.back_cancel_kb())
                         await state.set_state(AddReminderPills.third_take)
                     else:
-                        await message.answer("ℹ️<b>Введите дополнительную информацию</b>", reply_markup=replies.skip_bk_cl_kb())
+                        await message.answer("ℹ️<b>Введите дополнительную информацию</b>\n\n"
+                                         "Здесь вы можете указать дозировку препарата, то, как его принимать и прочую"
+                                         " информацию", reply_markup=replies.skip_bk_cl_kb())
                         await state.set_state(AddReminderPills.extra_inf)
                 else:
                     await message.answer("❗Время приёма лекарств <b>не должно совпадать</b> со временем,"
@@ -910,7 +935,9 @@ async def pill_third_take(message: types.Message, state: FSMContext):
                         await message.answer("4️⃣<b>Укажите время 4 приема</b>", reply_markup=replies.back_cancel_kb())
                         await state.set_state(AddReminderPills.four_take)
                     else:
-                        await message.answer("ℹ️<b>Введите дополнительную информацию</b>", reply_markup=replies.skip_bk_cl_kb())
+                        await message.answer("ℹ️<b>Введите дополнительную информацию</b>\n\n"
+                                         "Здесь вы можете указать дозировку препарата, то, как его принимать и прочую"
+                                         " информацию", reply_markup=replies.skip_bk_cl_kb())
                         await state.set_state(AddReminderPills.extra_inf)
                 else:
                     await message.answer("❗Время приёма лекарств <b>не должно совпадать</b> со временем,"
@@ -967,7 +994,9 @@ async def pill_four_take(message: types.Message, state: FSMContext):
                         await message.answer("5️⃣<b>Укажите время 5 приема</b>", reply_markup=replies.back_cancel_kb())
                         await state.set_state(AddReminderPills.five_take)
                     else:
-                        await message.answer("ℹ️<b>Введите дополнительную информацию</b>", reply_markup=replies.skip_bk_cl_kb())
+                        await message.answer("ℹ️<b>Введите дополнительную информацию</b>\n\n"
+                                         "Здесь вы можете указать дозировку препарата, то, как его принимать и прочую"
+                                         " информацию", reply_markup=replies.skip_bk_cl_kb())
                         await state.set_state(AddReminderPills.extra_inf)
                 else:
                     await message.answer("❗Время приёма лекарств <b>не должно совпадать</b> со временем,"
@@ -1024,7 +1053,9 @@ async def pill_five_take(message: types.Message, state: FSMContext):
                         await message.answer("6️⃣<b>Укажите время 6 приема</b>", reply_markup=replies.back_cancel_kb())
                         await state.set_state(AddReminderPills.six_take)
                     else:
-                        await message.answer("ℹ️<b>Введите дополнительную информацию</b>", reply_markup=replies.skip_bk_cl_kb())
+                        await message.answer("ℹ️<b>Введите дополнительную информацию</b>\n\n"
+                                         "Здесь вы можете указать дозировку препарата, то, как его принимать и прочую"
+                                         " информацию", reply_markup=replies.skip_bk_cl_kb())
                         await state.set_state(AddReminderPills.extra_inf)
                 else:
                     await message.answer("❗Время приёма лекарств <b>не должно совпадать</b> со временем,"
@@ -1076,7 +1107,9 @@ async def pill_six_take(message: types.Message, state: FSMContext):
                 if hit_counter == 0:
                     takes_time.append(chosen_time)
                     await state.update_data(first_take=takes_time)
-                    await message.answer("ℹ️<b>Введите дополнительную информацию</b>", reply_markup=replies.skip_bk_cl_kb())
+                    await message.answer("ℹ️<b>Введите дополнительную информацию</b>\n\n"
+                                         "Здесь вы можете указать дозировку препарата, то, как его принимать и прочую"
+                                         " информацию", reply_markup=replies.skip_bk_cl_kb())
                     await state.set_state(AddReminderPills.extra_inf)
                 else:
                     await message.answer("❗Время приёма лекарств <b>не должно совпадать</b> со временем,"
@@ -1097,53 +1130,57 @@ async def pill_six_take_err(message: types.Message):
 
 @user_private_router.message(AddReminderPills.extra_inf, F.text)
 async def pill_extra(message: types.Message, state: FSMContext, session: AsyncSession):
-    await state.update_data(extra_inf=message.text)
-    try:
-        await state.update_data(chat_id=str(message.chat.id))
-        data = await state.get_data()
-        takes_time = data["first_take"]
-        if data["freq_per_day"] >= 1:
-            await state.update_data(first_take=takes_time[0])
-            if data["freq_per_day"] >= 2:
-                await state.update_data(sec_take=takes_time[1])
-                if data["freq_per_day"] >= 3:
-                    await state.update_data(third_take=takes_time[2])
-                    if data["freq_per_day"] >= 4:
-                        await state.update_data(four_take=takes_time[3])
-                        if data["freq_per_day"] >= 5:
-                            await state.update_data(five_take=takes_time[4])
-                            if data["freq_per_day"] == 6:
-                                await state.update_data(six_take=takes_time[5])
+    if len(message.text) <= 250:
+        await state.update_data(extra_inf=message.text)
+        try:
+            await state.update_data(chat_id=str(message.chat.id))
+            data = await state.get_data()
+            takes_time = data["first_take"]
+            if data["freq_per_day"] >= 1:
+                await state.update_data(first_take=takes_time[0])
+                if data["freq_per_day"] >= 2:
+                    await state.update_data(sec_take=takes_time[1])
+                    if data["freq_per_day"] >= 3:
+                        await state.update_data(third_take=takes_time[2])
+                        if data["freq_per_day"] >= 4:
+                            await state.update_data(four_take=takes_time[3])
+                            if data["freq_per_day"] >= 5:
+                                await state.update_data(five_take=takes_time[4])
+                                if data["freq_per_day"] == 6:
+                                    await state.update_data(six_take=takes_time[5])
+                                else:
+                                    await state.update_data(six_take=None)
                             else:
+                                await state.update_data(five_take=None)
                                 await state.update_data(six_take=None)
                         else:
+                            await state.update_data(four_take=None)
                             await state.update_data(five_take=None)
                             await state.update_data(six_take=None)
                     else:
+                        await state.update_data(third_take=None)
                         await state.update_data(four_take=None)
                         await state.update_data(five_take=None)
                         await state.update_data(six_take=None)
                 else:
+                    await state.update_data(sec_take=None)
                     await state.update_data(third_take=None)
                     await state.update_data(four_take=None)
                     await state.update_data(five_take=None)
                     await state.update_data(six_take=None)
-            else:
-                await state.update_data(sec_take=None)
-                await state.update_data(third_take=None)
-                await state.update_data(four_take=None)
-                await state.update_data(five_take=None)
-                await state.update_data(six_take=None)
-        data1 = await state.get_data()
-        await orm_pills_remind(session, data1)
-        await message.answer("✅Напоминание добавлено\n\n🔔Напоминания будут приходить в указанное время\n\n"
-                             "❕Уведомления приходят по (UTC/GMT +05:00) Asia/Yekaterinburg",
-                             reply_markup=replies.start_kb())
-        await state.clear()
-    except Exception as e:
-        await message.answer(f"Ошибка: \n{str(e)}\n Информация не может быть загружена в базу данных",
-                             reply_markup=replies.start_kb())
-        await state.clear()
+            data1 = await state.get_data()
+            await orm_pills_remind(session, data1)
+            await message.answer("✅Напоминание добавлено\n\n🔔Напоминания будут приходить в указанное время\n\n"
+                                 "❕Уведомления приходят по (UTC/GMT +05:00) Asia/Yekaterinburg",
+                                 reply_markup=replies.start_kb())
+            await state.clear()
+        except Exception as e:
+            await message.answer(f"Ошибка: \n{str(e)}\n Информация не может быть загружена в базу данных",
+                                 reply_markup=replies.start_kb())
+            await state.clear()
+    else:
+        await message.answer("❗Длина текста сообщения не может быть больше 250 символов"
+                             "\n\n Введите текст заново")
 
 
 @user_private_router.message(AddReminderPills.extra_inf)
