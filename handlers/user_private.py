@@ -188,9 +188,13 @@ async def start(message: types.Message, state: FSMContext):
 
 
 @user_private_router.callback_query(StateFilter('*'), MyCallback.filter(F.name == "start"))
-async def back_to_start(query: CallbackQuery):
-    await query.message.delete()
-    await query.message.answer(f"❕Выберите действие:", reply_markup=replies.start_kb())
+async def back_to_start(query: CallbackQuery, state: FSMContext):
+    cur_state = await state.get_state()
+    if cur_state is None:
+        await query.message.delete()
+        await query.message.answer(f"❕Выберите действие:", reply_markup=replies.start_kb())
+    else:
+        await query.answer("❗️Вы не можете< выполнить действие пока заполняете данные❗️")
 
 
 @user_private_router.callback_query(SimpleCalendarCallback.filter(F.act == SimpleCalAct.cancel))
@@ -312,8 +316,8 @@ async def back(query: CallbackQuery, state: FSMContext) -> None:
             prev = step
     else:
         if cur_state == AddReminderDoctor.speciality:
-            await query.message.edit_text("❗️<b>Предыдущего шага нет</b>\n Введите название или нажмите \"Отмена\"")
-            await query.answer("❗️Предыдущего шага нет.️\n Введите название или нажмите \"Отмена\"")
+            await query.message.edit_text("❗️<b>Предыдущего шага нет</b>\n Введите специальность или нажмите \"Отмена\"")
+            await query.answer("❗️Предыдущего шага нет.️\n Введите специальность или нажмите \"Отмена\"")
             return
 
         prev = None
@@ -407,89 +411,98 @@ async def skip(query: CallbackQuery, state: FSMContext, session: AsyncSession):
                                        reply_markup=replies.start_kb())
             await state.clear()
     else:
-        await query.message.answer("Этого не должно было случиться, что-то пошло не так, укажите значение заново")
+        await query.message.answer("❗Вы не находитесь в стадии указания дополнительной информации")
 
 
 @user_private_router.callback_query(StateFilter('*'), MyCallback.filter(F.name == "look"))
 async def reminds_list(query: CallbackQuery, session: AsyncSession):
     await query.message.delete()
     await query.answer("📋Список напоминаний⬆\n\n❕Для изменения или удаления напоминания нажмите на кнопку")
-    for remind in await orm_get_reminds_doctor(session):
-        if int(remind.chat_id) == query.message.chat.id:
-            date = remind.date.strftime(f"%d.%m.%Y")
-            time = remind.date.strftime(f"%H:%M")
-            await query.message.answer(f"🩺Врач:<b> {remind.speciality}</b>\n🏥Поликлиника:"
-                                       f" {remind.name_clinic}\n<b>🗓{date} в {time}</b> в кабинете "
-                                       f"<b>{remind.cabinet}</b>\nℹ️Дополнительная информация: {remind.extra_inf_doctor}",
-                                       reply_markup=replies.get_btns(btns={
-                                           'Удалить 🚮': f'delete_{remind.id}'}))
-    for remind in await orm_get_reminds_pill(session):
-        if int(remind.chat_id) == query.message.chat.id:
-            date = remind.day_start.strftime(f"%d.%m.%Y")
-            if remind.freq_per_day >= 1:
-                time1 = remind.first_take.strftime(f"%H:%M")
-                if remind.freq_per_day >= 2:
-                    time2 = remind.sec_take.strftime(f"%H:%M")
-                    if remind.freq_per_day >= 3:
-                        time3 = remind.third_take.strftime(f"%H:%M")
-                        if remind.freq_per_day >= 4:
-                            time4 = remind.four_take.strftime(f"%H:%M")
-                            if remind.freq_per_day >= 5:
-                                time5 = remind.five_take.strftime(f"%H:%M")
-                                if remind.freq_per_day >= 6:
-                                    time6 = remind.six_take.strftime(f"%H:%M")
-            if remind.freq_per_day == 1:
-                await query.message.answer(f"<strong>💊Препарат: {remind.name}\n📋Прием {remind.freq_per_day} раз в день"
-                                           f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
-                                           f"\n⏰Время приема:\n1. {time1}\nℹ️Дополнительная информация: {remind.extra_inf}",
+
+    doctor_reminds = await orm_get_reminds_doctor(session)
+    pill_reminds = await orm_get_reminds_pill(session)
+
+    if not doctor_reminds and not pill_reminds:
+        await query.message.answer("❗У Вас нет напоминаний", reply_markup=replies.no_reminders_kb())
+        await query.answer("❗У Вас нет напоминаний")
+        return
+    else:
+        for remind in await orm_get_reminds_doctor(session):
+            if int(remind.chat_id) == query.message.chat.id:
+                date = remind.date.strftime(f"%d.%m.%Y")
+                time = remind.date.strftime(f"%H:%M")
+                await query.message.answer(f"🩺Врач:<b> {remind.speciality}</b>\n🏥Поликлиника:"
+                                           f" {remind.name_clinic}\n<b>🗓{date} в {time}</b> в кабинете "
+                                           f"<b>{remind.cabinet}</b>\nℹ️Дополнительная информация: {remind.extra_inf_doctor}",
                                            reply_markup=replies.get_btns(btns={
                                                'Удалить 🚮': f'delete_{remind.id}'}))
-            elif remind.freq_per_day == 2:
-                await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
-                                           f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
-                                           f"\n⏰Время приема:\n1. {time1}\n2. {time2}"
-                                           f"\nℹ️Дополнительная информация: {remind.extra_inf}",
-                                           reply_markup=replies.get_btns(btns={
-                                               'Удалить 🚮': f'delete_{remind.id}'}))
-            elif remind.freq_per_day == 3:
-                await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
-                                           f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
-                                           f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}"
-                                           f"\nℹ️Дополнительная информация: {remind.extra_inf}",
-                                           reply_markup=replies.get_btns(btns={
-                                               'Удалить 🚮': f'delete_{remind.id}'}))
-            elif remind.freq_per_day == 4:
-                await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
-                                           f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
-                                           f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}"
-                                           f"\nℹ️Дополнительная информация: {remind.extra_inf}",
-                                           reply_markup=replies.get_btns(btns={
-                                               'Удалить 🚮': f'delete_{remind.id}'}))
-            elif remind.freq_per_day == 5:
-                await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
-                                           f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
-                                           f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}\n5. {time5}"
-                                           f"\nℹ️Дополнительная информация: {remind.extra_inf}",
-                                           reply_markup=replies.get_btns(btns={
-                                               'Удалить 🚮': f'delete_{remind.id}'}))
-            elif remind.freq_per_day == 6:
-                await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
-                                           f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
-                                           f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}\n5. {time5}\n6. {time6}"
-                                           f"\nℹ️Дополнительная информация: {remind.extra_inf}",
-                                           reply_markup=replies.get_btns(btns={
-                                               'Удалить 🚮': f'delete_{remind.id}'}))
-    await query.message.answer("❗Список напоминаний, в случае их наличия, представлен выше⬆️"
-                               "\n\n📝Для удаления напоминания нажмите на кнопку"
-                               "\n\n❕Уведомления приходят по (UTC/GMT +05:00) Asia/Yekaterinburg",
-                               reply_markup=replies.back_only_for_look_kb())
+        for remind in await orm_get_reminds_pill(session):
+            if int(remind.chat_id) == query.message.chat.id:
+                date = remind.day_start.strftime(f"%d.%m.%Y")
+                if remind.freq_per_day >= 1:
+                    time1 = remind.first_take.strftime(f"%H:%M")
+                    if remind.freq_per_day >= 2:
+                        time2 = remind.sec_take.strftime(f"%H:%M")
+                        if remind.freq_per_day >= 3:
+                            time3 = remind.third_take.strftime(f"%H:%M")
+                            if remind.freq_per_day >= 4:
+                                time4 = remind.four_take.strftime(f"%H:%M")
+                                if remind.freq_per_day >= 5:
+                                    time5 = remind.five_take.strftime(f"%H:%M")
+                                    if remind.freq_per_day >= 6:
+                                        time6 = remind.six_take.strftime(f"%H:%M")
+                if remind.freq_per_day == 1:
+                    await query.message.answer(f"<strong>💊Препарат: {remind.name}\n📋Прием {remind.freq_per_day} раз в день"
+                                               f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
+                                               f"\n⏰Время приема:\n1. {time1}\nℹ️Дополнительная информация: {remind.extra_inf}",
+                                               reply_markup=replies.get_btns(btns={
+                                                   'Удалить 🚮': f'delete_{remind.id}'}))
+                elif remind.freq_per_day == 2:
+                    await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
+                                               f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
+                                               f"\n⏰Время приема:\n1. {time1}\n2. {time2}"
+                                               f"\nℹ️Дополнительная информация: {remind.extra_inf}",
+                                               reply_markup=replies.get_btns(btns={
+                                                   'Удалить 🚮': f'delete_{remind.id}'}))
+                elif remind.freq_per_day == 3:
+                    await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
+                                               f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
+                                               f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}"
+                                               f"\nℹ️Дополнительная информация: {remind.extra_inf}",
+                                               reply_markup=replies.get_btns(btns={
+                                                   'Удалить 🚮': f'delete_{remind.id}'}))
+                elif remind.freq_per_day == 4:
+                    await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
+                                               f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
+                                               f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}"
+                                               f"\nℹ️Дополнительная информация: {remind.extra_inf}",
+                                               reply_markup=replies.get_btns(btns={
+                                                   'Удалить 🚮': f'delete_{remind.id}'}))
+                elif remind.freq_per_day == 5:
+                    await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
+                                               f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
+                                               f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}\n5. {time5}"
+                                               f"\nℹ️Дополнительная информация: {remind.extra_inf}",
+                                               reply_markup=replies.get_btns(btns={
+                                                   'Удалить 🚮': f'delete_{remind.id}'}))
+                elif remind.freq_per_day == 6:
+                    await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
+                                               f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
+                                               f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}\n5. {time5}\n6. {time6}"
+                                               f"\nℹ️Дополнительная информация: {remind.extra_inf}",
+                                               reply_markup=replies.get_btns(btns={
+                                                   'Удалить 🚮': f'delete_{remind.id}'}))
+        await query.message.answer("❗Список напоминаний представлен выше ⬆️"
+                                   "\n\n📝Для удаления напоминания нажмите на кнопку"
+                                   "\n\n❕Уведомления приходят по (UTC/GMT +05:00) Asia/Yekaterinburg",
+                                   reply_markup=replies.back_only_for_look_kb())
 
 
 @user_private_router.callback_query(F.data.startswith('delete_'))
 async def delete_remind(query: types.CallbackQuery, session: AsyncSession):
     remind_id = query.data.split("_")[-1]
     await orm_delete_remind(session, int(remind_id))
-    await query.message.edit_text("❗Напоминание удалено", reply_markup=replies.start_kb())
+    await query.message.edit_text("❗Напоминание удалено")
     await query.answer("❗Напоминание удалено")
 
 

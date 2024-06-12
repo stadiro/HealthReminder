@@ -15,6 +15,14 @@ def start_kb():
     return builder.adjust(1).as_markup()
 
 
+def no_reminders_kb():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="Создать напоминание ⏰", callback_data=MyCallback(name="create").pack()),
+    )
+    return builder.as_markup()
+
+
 def create_kb():
     builder = InlineKeyboardBuilder()
     builder.row(
