@@ -180,7 +180,7 @@ async def start(message: types.Message, state: FSMContext):
     cur_state = await state.get_state()
     if cur_state is None:
         name = message.from_user.full_name
-        await message.answer(f"👋Привет, {name}!\n\n🤖Это - бот, напоминающий о приеме лекарств или записи ко врачу",
+        await message.answer(f"👋Привет, {name}!\n\n🤖Это - бот, напоминающий о приеме лекарств или записи к врачу",
                              reply_markup=replies.start_kb())
     else:
         await message.answer("❗️Вы <b>не можете</b> вернуться в главное меню пока заполняете данные❗️"
@@ -519,7 +519,7 @@ async def create(query: CallbackQuery):
 
 @user_private_router.callback_query(StateFilter(None), MyCallback.filter(F.name == "doctor"))
 async def doctor(query: CallbackQuery, state: FSMContext):
-    await query.message.edit_text("🖋️Запись ко врачу\n\n🩺<b>Введите специальность врача</b>", reply_markup=replies.cancel_kb())
+    await query.message.edit_text("🖋️Запись к врачу\n\n🩺<b>Введите специальность врача</b>", reply_markup=replies.cancel_kb())
     await state.set_state(AddReminderDoctor.speciality)
 
 

@@ -26,7 +26,7 @@ def no_reminders_kb():
 def create_kb():
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="Запись ко врачу 🏥", callback_data=MyCallback(name="doctor").pack()),
+        InlineKeyboardButton(text="Запись к врачу 🏥", callback_data=MyCallback(name="doctor").pack()),
         InlineKeyboardButton(text="Прием лекарств 💊", callback_data=MyCallback(name="pills").pack()),
         InlineKeyboardButton(text="Назад ⬅️", callback_data=MyCallback(name="start").pack()),
     )
