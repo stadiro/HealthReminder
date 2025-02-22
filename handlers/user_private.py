@@ -955,7 +955,7 @@ async def pill_name_err(message: types.Message):
 
 
 @user_private_router.message(AddReminderPills.freq_days, F.text)
-async def pill_periodicity(message: types.Message, state: FSMContext):
+async def pill_periodicity(message: types.Message, state: FSMContext):#
     mess = message.text
     if mess.isdigit():
         if int(mess) == 1:
