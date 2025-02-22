@@ -56,13 +56,13 @@ class GenericCalendar:
         date = datetime(int(data.year), int(data.month), int(data.day))
         if self.min_date and self.min_date > date:
             await query.answer(
-                f'Должна быть указана дата не ранее {self.min_date.strftime("%d/%m/%Y")}',
+                f'❗️Должна быть указана дата не ранее {self.min_date.strftime("%d/%m/%Y")}',
                 show_alert=self.show_alerts
             )
             return False, None
         elif self.max_date and self.max_date < date:
             await query.answer(
-                f'Должна быть указана дата не позднее {self.max_date.strftime("%d/%m/%Y")}',
+                f'❗️Должна быть указана дата не позднее {self.max_date.strftime("%d/%m/%Y")}',
                 show_alert=self.show_alerts
             )
             return False, None

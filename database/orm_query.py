@@ -2,9 +2,59 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from database.models import DoctorRemind, PillsRemind, AllRemind, PKTable
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+from sqlalchemy.ext.asyncio import AsyncSession
+from database.models import UserTimezone
+
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from sqlalchemy.future import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+async def convert_to_yekaterinburg(session, chat_id, dt):
+    """Конвертирует datetime из часового пояса пользователя в Asia/Yekaterinburg"""
+    from zoneinfo import ZoneInfo
+
+    # Получаем часовой пояс пользователя
+    result = await session.execute(select(UserTimezone).where(UserTimezone.chat_id == chat_id))
+    user_timezone = result.scalars().first()
+
+    # Если часовой пояс найден — используем его, иначе берём Europe/Moscow
+    user_tz = user_timezone.timezone if user_timezone else "Europe/Moscow"
+
+    # Логируем исходные данные
+    print(f"Исходное время (без tzinfo): {dt}")
+
+    # Добавляем временную зону пользователя (если нет tzinfo)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=ZoneInfo(user_tz))
+
+    # Логируем после добавления часового пояса
+    print(f"После добавления {user_tz}: {dt}")
+
+    # Конвертируем в Asia/Yekaterinburg
+    dt_yek = dt.astimezone(ZoneInfo("Asia/Yekaterinburg"))
+
+    # Логируем результат
+    print(f"После конвертации в Asia/Yekaterinburg: {dt_yek}")
+
+    return dt_yek
 
 
 async def orm_doctor_remind(session: AsyncSession, data: dict):
+    chat_id = str(data["chat_id"])
+
+    # Конвертируем все временные значения
+    date_yekaterinburg = await convert_to_yekaterinburg(session, chat_id, data["date"])
+    time_yekaterinburg = await convert_to_yekaterinburg(session, chat_id, data["time"])
+    sec_time_yekaterinburg = await convert_to_yekaterinburg(session, chat_id, data["sec_time"])
+
+    date_yekaterinburg = date_yekaterinburg.replace(tzinfo=None)
+    time_yekaterinburg = time_yekaterinburg.replace(tzinfo=None)
+    sec_time_yekaterinburg = sec_time_yekaterinburg.replace(tzinfo=None)
+
+
     pk = PKTable(
         name=data["speciality"]
     )
@@ -15,30 +65,30 @@ async def orm_doctor_remind(session: AsyncSession, data: dict):
         chat_id=data["chat_id"],
         speciality=data["speciality"],
         name_clinic=data["name_clinic"],
-        date=data["date"],
-        first_remind=data["time"],
-        second_remind=data["sec_time"],
+        date=date_yekaterinburg,
+        first_remind=time_yekaterinburg,
+        second_remind=sec_time_yekaterinburg,
         cabinet=data["cabinet"],
         extra_inf_doctor=data["extra_inf_doctor"]
     )
     session.add(obj)
     all_remind1 = AllRemind(
         id=pk.id,
-        date_time=data["time"],
+        date_time=time_yekaterinburg,
         is_it_last=0,
         pills_or_doctor=0
     )
     session.add(all_remind1)
     all_remind2 = AllRemind(
         id=pk.id,
-        date_time=data["sec_time"],
+        date_time=sec_time_yekaterinburg,
         is_it_last=0,
         pills_or_doctor=0
     )
     session.add(all_remind2)
     all_remind3 = AllRemind(
         id=pk.id,
-        date_time=data["date"],
+        date_time=date_yekaterinburg,
         is_it_last=1,
         pills_or_doctor=0
     )
@@ -46,97 +96,82 @@ async def orm_doctor_remind(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def orm_pills_remind(session: AsyncSession, data: dict):
+async def orm_pills_remind( session: AsyncSession, data: dict):
     pk = PKTable(
         name=data["name"]
     )
     session.add(pk)
     await session.commit()
+
+    chat_id = str(data["chat_id"])
+    first_take1 = await convert_to_yekaterinburg(session, chat_id, data["first_take"]) if data["first_take"] is not None else None
+    sec_take1 = await convert_to_yekaterinburg(session, chat_id, data["sec_take"]) if data["sec_take"] is not None else None
+    third_take1 = await convert_to_yekaterinburg(session, chat_id, data["third_take"]) if data["third_take"] is not None else None
+    four_take1 = await convert_to_yekaterinburg(session, chat_id, data["four_take"]) if data["four_take"] is not None else None
+    five_take1 = await convert_to_yekaterinburg(session, chat_id, data["five_take"]) if data["five_take"] is not None else None
+    six_take1 = await convert_to_yekaterinburg(session, chat_id, data["six_take"]) if data["six_take"] is not None else None
+
+
+
+    first_take1 = first_take1.replace(tzinfo=None) if first_take1 is not None else None
+    sec_take1 = sec_take1.replace(tzinfo=None) if sec_take1 is not None else None
+    third_take1 = third_take1.replace(tzinfo=None) if third_take1 is not None else None
+    four_take1 = four_take1.replace(tzinfo=None) if four_take1 is not None else None
+    five_take1 = five_take1.replace(tzinfo=None) if five_take1 is not None else None
+    six_take1 = six_take1.replace(tzinfo=None) if six_take1 is not None else None
+
     obj = PillsRemind(
         chat_id=data["chat_id"],
         name=data["name"],
         freq_days=data["freq_days"],
+        periodicity=data["periodicity"],
         day_start=data["day_start"],
         freq_per_day=data["freq_per_day"],
-        first_take=data["first_take"],
-        sec_take=data["sec_take"],
-        third_take=data["third_take"],
-        four_take=data["four_take"],
-        five_take=data["five_take"],
-        six_take=data["six_take"],
+        first_take=first_take1,
+        sec_take=sec_take1,
+        third_take=third_take1,
+        four_take=four_take1,
+        five_take=five_take1,
+        six_take=six_take1,
         extra_inf=data["extra_inf"]
     )
     obj.id = pk.id
     session.add(obj)
     await session.commit()
 
+    from datetime import timedelta, datetime
+
+    # Формируем список приёмов (предполагается, что obj.first_take всегда задан)
+    takes = []
+    if obj.first_take is not None:
+        takes.append(obj.first_take)
+    if obj.sec_take is not None:
+        takes.append(obj.sec_take)
+    if obj.third_take is not None:
+        takes.append(obj.third_take)
+    if obj.four_take is not None:
+        takes.append(obj.four_take)
+    if obj.five_take is not None:
+        takes.append(obj.five_take)
+    if obj.six_take is not None:
+        takes.append(obj.six_take)
+
+    # Проходим по каждому дню приема
     for i in range(data["freq_days"]):
-        if obj.first_take is not None:
+        # Для каждого времени приема из списка создаём напоминание
+        for j, take in enumerate(takes):
             all_remind = AllRemind(
-                date_time=datetime.combine(data["day_start"].date(), data["first_take"].time()),
+                date_time=datetime.combine(data["day_start"].date(), take.time()),
                 pills_or_doctor=1
             )
             all_remind.id = pk.id
-            if i == int(data["freq_days"]-1) and obj.sec_take is None:
+            # Если это последний день и последний прием – флаг is_it_last = 1
+            if i == data["freq_days"] - 1 and j == len(takes) - 1:
                 all_remind.is_it_last = 1
             else:
                 all_remind.is_it_last = 0
             session.add(all_remind)
-            if obj.sec_take is not None:
-                all_remind1 = AllRemind(
-                    date_time=datetime.combine(data["day_start"].date(), data["sec_take"].time()),
-                    pills_or_doctor=1
-                )
-                all_remind1.id = pk.id
-                if i == int(data["freq_days"] - 1) and obj.third_take is None:
-                    all_remind1.is_it_last = 1
-                else:
-                    all_remind1.is_it_last = 0
-                session.add(all_remind1)
-                if obj.third_take is not None:
-                    all_remind2 = AllRemind(
-                        date_time=datetime.combine(data["day_start"].date(), data["third_take"].time()),
-                        pills_or_doctor=1
-                    )
-                    all_remind2.id = pk.id
-                    if i == int(data["freq_days"] - 1) and obj.four_take is None:
-                        all_remind2.is_it_last = 1
-                    else:
-                        all_remind2.is_it_last = 0
-                    session.add(all_remind2)
-                    if obj.four_take is not None:
-                        all_remind3 = AllRemind(
-                            date_time=datetime.combine(data["day_start"].date(), data["four_take"].time()),
-                            pills_or_doctor=1
-                        )
-                        all_remind3.id = pk.id
-                        if i == int(data["freq_days"] - 1) and obj.five_take is None:
-                            all_remind3.is_it_last = 1
-                        else:
-                            all_remind3.is_it_last = 0
-                        session.add(all_remind3)
-                        if obj.five_take is not None:
-                            all_remind4 = AllRemind(
-                                date_time=datetime.combine(data["day_start"].date(), data["five_take"].time()),
-                                pills_or_doctor=1
-                            )
-                            all_remind4.id = pk.id  # Set the foreign key in PillsRemind
-                            if i == int(data["freq_days"] - 1) and obj.six_take is None:
-                                all_remind4.is_it_last = 1
-                            else:
-                                all_remind4.is_it_last = 0
-                            session.add(all_remind4)
-                            if obj.six_take is not None:
-                                all_remind5 = AllRemind(
-                                    date_time=datetime.combine(data["day_start"].date(), data["six_take"].time()),
-                                    pills_or_doctor=1
-                                )
-                                all_remind5.id = pk.id
-                                if i == int(data["freq_days"] - 1):
-                                    all_remind5.is_it_last = 1
-                                else:
-                                    all_remind5.is_it_last = 0
-                                session.add(all_remind5)
+        # Переходим к следующему дню
         data["day_start"] += timedelta(days=1)
     await session.commit()
 

@@ -6,6 +6,14 @@ class Base(DeclarativeBase):
     ...
 
 
+class UserTimezone(Base):
+    __tablename__ = 'user_timezone'
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    chat_id: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    timezone: Mapped[str] = mapped_column(Text, nullable=False)
+
+
 class PKTable(Base):
     __tablename__ = 'pk_table'
 
@@ -54,6 +62,7 @@ class PillsRemind(Base):
     chat_id: Mapped[str] = mapped_column(Text, nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     freq_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    periodicity: Mapped[int] = mapped_column(Integer, nullable=False)
     day_start: Mapped[DateTime] = mapped_column(DateTime, nullable=False)
     freq_per_day: Mapped[int] = mapped_column(Integer, nullable=False)
     first_take: Mapped[DateTime] = mapped_column(DateTime, nullable=False)
