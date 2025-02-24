@@ -63,6 +63,7 @@ class PillsRemind(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     freq_days: Mapped[int] = mapped_column(Integer, nullable=False)
     periodicity: Mapped[int] = mapped_column(Integer, nullable=False)
+    interval: Mapped[int] = mapped_column(Integer, nullable=True)
     day_start: Mapped[DateTime] = mapped_column(DateTime, nullable=False)
     freq_per_day: Mapped[int] = mapped_column(Integer, nullable=False)
     first_take: Mapped[DateTime] = mapped_column(DateTime, nullable=False)

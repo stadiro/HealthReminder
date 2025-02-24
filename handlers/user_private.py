@@ -28,6 +28,7 @@ from inline_cal.schemas import SimpleCalendarCallback
 
 from keyboards import replies
 from keyboards.replies import MyCallback
+
 load_dotenv(find_dotenv())
 bot = Bot(token=os.getenv('TOKEN'), default=DefaultBotProperties(parse_mode=ParseMode.HTML))  # токен ботика
 user_private_router = Router()
@@ -73,7 +74,7 @@ class AddReminderPills(StatesGroup):
 
     texts = {
         'AddReminderPills:name': '💊<b>Введите название лекарства</b>',
-        'AddReminderPills:freq_days': '🗓️<b>Сколько дней нужно принимать лекарство</b>',
+        'AddReminderPills:freq_days': '🗓️<b>Сколько дней составляет продолжительность курса?</b>',
         'AddReminderPills:periodicity': '📅<b>Как часто нужно принимать лекарство?</b>',
         'AddReminderPills:interval': '🗓️<b>Какой интервал в днях между днями приема лекарства?</b>',
         'AddReminderPills:day_start': '🗓️<b>Укажите день начала приема</b>',
@@ -91,22 +92,15 @@ class AddReminderPills(StatesGroup):
 
 
 async def convert_from_yekaterinburg(session, chat_id, dt):
-    """Конвертирует datetime из Asia/Yekaterinburg в часовой пояс пользователя"""
-
-    # Получаем часовой пояс пользователя
     result = await session.execute(select(UserTimezone).where(UserTimezone.chat_id == chat_id))
     user_timezone = result.scalars().first()
 
-    # Если часовой пояс найден — используем его, иначе берём Europe/Moscow
     user_tz = user_timezone.timezone if user_timezone else "Europe/Moscow"
 
-    # Если datetime наивный (без tzinfo) — добавляем часовой пояс Екатеринбурга
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=ZoneInfo("Asia/Yekaterinburg"))
 
-    # Конвертируем в часовой пояс пользователя
     return dt.astimezone(ZoneInfo(user_tz))
-
 
 
 async def send_current(bot: Bot, session: AsyncSession):
@@ -142,55 +136,29 @@ async def send_current(bot: Bot, session: AsyncSession):
                     elif remind.pills_or_doctor == 1:
                         for pl_rm in await orm_get_remind_pill(session, int(remind.id)):
                             ch_id = pl_rm.chat_id
-                            date = pl_rm.day_start.strftime(f"%d.%m.%Y")
-                            if pl_rm.freq_per_day >= 1:
-                                time1 = pl_rm.first_take.strftime(f"%H:%M")
-                                if pl_rm.freq_per_day >= 2:
-                                    time2 = pl_rm.sec_take.strftime(f"%H:%M")
-                                    if pl_rm.freq_per_day >= 3:
-                                        time3 = pl_rm.third_take.strftime(f"%H:%M")
-                                        if pl_rm.freq_per_day >= 4:
-                                            time4 = pl_rm.four_take.strftime(f"%H:%M")
-                                            if pl_rm.freq_per_day >= 5:
-                                                time5 = pl_rm.five_take.strftime(f"%H:%M")
-                                                if pl_rm.freq_per_day >= 6:
-                                                    time6 = pl_rm.six_take.strftime(f"%H:%M")
-                            if pl_rm.freq_per_day == 1:
-                                await bot.send_message(chat_id=int(ch_id), text=f"🔔<strong>Пора принимать лекарство🔔\n\n"
-                                           f"💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
-                                           f" на протяжении {pl_rm.freq_days} дней начиная с {date}</strong>"
-                                           f"\n⏰Время приема:\n1. {time1}"
-                                           f"\nℹ️Дополнительная информация: {pl_rm.extra_inf}")
-                            elif pl_rm.freq_per_day == 2:
-                                await bot.send_message(chat_id=int(ch_id), text=f"🔔<strong>Пора принимать лекарство🔔\n\n"
-                                           f"💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
-                                           f" на протяжении {pl_rm.freq_days} дней начиная с {date}</strong>"
-                                           f"\n⏰Время приема:\n1. {time1}\n2. {time2}"
-                                           f"\nℹ️Дополнительная информация: {pl_rm.extra_inf}")
-                            elif pl_rm.freq_per_day == 3:
-                                await bot.send_message(chat_id=int(ch_id), text=f"🔔<strong>Пора принимать лекарство🔔\n\n"
-                                           f"💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
-                                           f" на протяжении {pl_rm.freq_days} дней начиная с {date}</strong>"
-                                           f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}"
-                                           f"\nℹ️Дополнительная информация: {pl_rm.extra_inf}")
-                            elif pl_rm.freq_per_day == 4:
-                                await bot.send_message(chat_id=int(ch_id), text=f"🔔<strong>Пора принимать лекарство🔔\n\n"
-                                           f"💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
-                                           f" на протяжении {pl_rm.freq_days} дней начиная с {date}</strong>"
-                                           f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}"
-                                           f"\nℹ️Дополнительная информация: {pl_rm.extra_inf}")
-                            elif pl_rm.freq_per_day == 5:
-                                await bot.send_message(chat_id=int(ch_id), text=f"🔔<strong>Пора принимать лекарство🔔\n\n"
-                                           f"💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
-                                           f" на протяжении {pl_rm.freq_days} дней начиная с {date}</strong>"
-                                           f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}\n5. {time5}"
-                                           f"\nℹ️Дополнительная информация: {pl_rm.extra_inf}")
-                            elif pl_rm.freq_per_day == 6:
-                                await bot.send_message(chat_id=int(ch_id), text=f"🔔<strong>Пора принимать лекарство🔔\n\n"
-                                           f"💊Препарат: {pl_rm.name}\n🗓Прием {pl_rm.freq_per_day} раз в день"
-                                           f" на протяжении {pl_rm.freq_days} дней начиная с {date}</strong>"
-                                           f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}\n5. {time5}\n6. {time6}"
-                                           f"\nℹ️Дополнительная информация: {pl_rm.extra_inf}")
+                            date = pl_rm.day_start.strftime("%d.%m.%Y")
+                            take_attrs = ["first_take", "sec_take", "third_take", "four_take", "five_take", "six_take"]
+                            times = []
+                            for i in range(pl_rm.freq_per_day):
+                                time = await convert_from_yekaterinburg(session, ch_id, getattr(pl_rm, take_attrs[i]))
+                                times.append(time.strftime("%H:%M"))
+                            text = (
+                                "каждый день" if pl_rm.periodicity == 0 else
+                                "день через день" if pl_rm.periodicity == 1 else
+                                f"с интервалом в {pl_rm.interval} дней"
+                            )
+                            times_str = "\n".join([f"{i + 1}. {t}" for i, t in enumerate(times)])
+                            await bot.send_message(
+                                chat_id=int(ch_id),
+                                text=(
+                                    f"🔔<strong>Пора принимать лекарство🔔\n\n"
+                                    f"💊Препарат: {pl_rm.name}\n"
+                                    f"🗓Прием {pl_rm.freq_per_day} раз в день, <b>{text}</b> "
+                                    f"на протяжении {pl_rm.freq_days} дней начиная с {date}</strong>\n"
+                                    f"⏰Время приема:\n{times_str}\n"
+                                    f"ℹ️Дополнительная информация: {pl_rm.extra_inf}"
+                                )
+                            )
                             if remind.is_it_last == 1:
                                 await orm_delete_remind(session, int(pl_rm.id))
             await asyncio.sleep(60)
@@ -224,7 +192,7 @@ async def get_timezone(city_name: str) -> str:
     except Exception as e:
         return None
 
-# Хэндлер для команды /start
+
 @user_private_router.message(CommandStart())
 async def start(message: types.Message, state: FSMContext, session: AsyncSession):
     cur_state = await state.get_state()
@@ -255,7 +223,6 @@ async def start(message: types.Message, state: FSMContext, session: AsyncSession
     )
 
 
-# Хэндлер для обработки ввода города (определение часового пояса)
 @user_private_router.message(StateFilter("waiting_for_timezone"))
 async def process_timezone(message: types.Message, state: FSMContext, session: AsyncSession):
     city_name = message.text.strip()
@@ -269,17 +236,12 @@ async def process_timezone(message: types.Message, state: FSMContext, session: A
     result = await session.execute(select(UserTimezone).where(UserTimezone.chat_id == chat_id))
     existing_record = result.scalars().first()
     if existing_record:
-        # Удаляем существующую запись
         await session.delete(existing_record)
         await session.commit()
 
-    # Сохраняем новый часовой пояс в базе данных
     new_user_tz = UserTimezone(chat_id=chat_id, timezone=tz)
     session.add(new_user_tz)
     await session.commit()
-
-    # После определения часового пояса выводим стандартное приветствие
-    name = message.from_user.full_name
     await message.answer(
         f"🕰Ваш часовой пояс установлен: {tz}\n\n🤖Это - бот, напоминающий о приеме лекарств или записи к врачу",
         reply_markup=replies.start_kb()
@@ -338,9 +300,8 @@ async def calendar_back(query: CallbackQuery, state: FSMContext) -> None:
     elif cur_state in AddReminderPills.__all_states__:
         data = await state.get_data()
         periodicity = data.get("periodicity")
-        freq_days = int(data.get("freq_days", 0))  # Если данных нет, то по умолчанию будет 0
+        freq_days = int(data.get("freq_days", 0))
 
-        # Логика определения предыдущего шага
         if periodicity == 2:
             prev_state = AddReminderPills.interval
             await state.set_state(prev_state)
@@ -362,21 +323,6 @@ async def calendar_back(query: CallbackQuery, state: FSMContext) -> None:
                 f"❗️<b>Вы вернулись к прошлому шагу</b>\n\n{AddReminderPills.texts[prev_state.state]}",
                 reply_markup=replies.repeatability_kb()
             )
-        '''else:
-            prev_state = None
-            for step in AddReminderPills.__all_states__:
-                if step == cur_state:
-                    break
-                prev_state = step
-
-        # Если найден предыдущий шаг, устанавливаем его
-        if prev_state:
-            await state.set_state(prev_state)
-            await query.answer("❗️ Вы вернулись к прошлому шагу ❗️")
-            await query.message.edit_text(
-                f"❗️<b>Вы вернулись к прошлому шагу</b>\n\n{AddReminderPills.texts[prev_state.state]}",
-                reply_markup=replies.repeatability_kb()
-            )'''
 
 
 @user_private_router.callback_query(StateFilter('*'), MyCallback.filter(F.name == "cancel"))
@@ -392,73 +338,6 @@ async def cancel(query: CallbackQuery, state: FSMContext) -> None:
 @user_private_router.callback_query(StateFilter('*'), MyCallback.filter(F.name == "back"))
 async def back(query: CallbackQuery, state: FSMContext) -> None:
     cur_state = await state.get_state()
-    '''if cur_state in AddReminderPills.__all_states__:
-        if cur_state == AddReminderPills.name:
-            await query.message.edit_text("❗️<b>Предыдущего шага нет</b>\n Введите название или нажмите \"Отмена\"")
-            await query.answer("❗️Предыдущего шага нет.️\n Введите название или нажмите \"Отмена\"")
-            return
-
-        prev = None
-        for step in AddReminderPills.__all_states__:
-            if step == cur_state:
-                if cur_state == AddReminderPills.extra_inf:
-                    data = await state.get_data()
-                    count = data['freq_per_day']
-                    takes_time = data['first_take']
-                    takes_time.pop()
-                    if count == 1:
-                        await state.set_state(AddReminderPills.first_take)
-                        await query.message.edit_text(
-                            f"❗️<b>Вы вернулись к прошлому шагу</b>\n\n"
-                            f"{AddReminderPills.texts[AddReminderPills.first_take]}", reply_markup=replies.cancel_kb())
-                    elif count == 2:
-                        await state.set_state(AddReminderPills.sec_take)
-                        await query.message.edit_text(
-                            f"❗️<b>Вы вернулись к прошлому шагу</b>\n\n"
-                            f"{AddReminderPills.texts[AddReminderPills.sec_take]}", reply_markup=replies.cancel_kb())
-                    elif count == 3:
-                        await state.set_state(AddReminderPills.third_take)
-                        await query.message.edit_text(
-                            f"❗️<b>Вы вернулись к прошлому шагу</b>\n\n"
-                            f"{AddReminderPills.texts[AddReminderPills.third_take]}", reply_markup=replies.cancel_kb())
-                    elif count == 4:
-                        await state.set_state(AddReminderPills.four_take)
-                        await query.message.edit_text(
-                            f"❗️<b>Вы вернулись к прошлому шагу</b>\n\n"
-                            f"{AddReminderPills.texts[AddReminderPills.four_take]}", reply_markup=replies.cancel_kb())
-                    elif count == 5:
-                        await state.set_state(AddReminderPills.five_take)
-                        await query.message.edit_text(
-                            f"❗️<b>Вы вернулись к прошлому шагу</b>\n\n"
-                            f"{AddReminderPills.texts[AddReminderPills.five_take]}", reply_markup=replies.cancel_kb())
-                    elif count == 6:
-                        await state.set_state(AddReminderPills.six_take)
-                        await query.message.edit_text(
-                            f"❗️<b>Вы вернулись к прошлому шагу</b>\n\n"
-                            f"{AddReminderPills.texts[AddReminderPills.six_take]}", reply_markup=replies.cancel_kb())
-                else:
-                    await state.set_state(prev)
-                    await query.answer("❗️ Вы вернулись к прошлому шагу ❗️")
-                    if step == AddReminderPills.freq_days:
-                        await query.message.edit_text(
-                            f"❗️<b>Вы вернулись к прошлому шагу</b>\n\n{AddReminderPills.texts[prev.state]}",
-                            reply_markup=replies.cancel_kb())
-                    elif step == AddReminderPills.freq_per_day:
-                        await query.message.edit_text(f"❗️<b>Вы вернулись к прошлому шагу</b>\n\n{AddReminderPills.texts[prev.state]}",
-                                                      reply_markup=await SimpleCalendar(locale='ru_Ru').start_calendar())
-                    else:
-                        if (cur_state == AddReminderPills.sec_take or cur_state == AddReminderPills.third_take or
-                                cur_state == AddReminderPills.four_take or cur_state == AddReminderPills.five_take or
-                                cur_state == AddReminderPills.six_take):
-                            data = await state.get_data()
-                            takes_time = data['first_take']
-                            takes_time.pop()
-                            await state.update_data(first_take=takes_time)
-                        await query.message.edit_text(
-                            f"❗️<b>Вы вернулись к прошлому шагу</b>\n\n{AddReminderPills.texts[prev.state]}",
-                            reply_markup=replies.back_cancel_kb())
-                    return
-            prev = step'''
     if cur_state in AddReminderPills.__all_states__:
         if cur_state == AddReminderPills.name:
             await query.message.edit_text("❗️<b>Предыдущего шага нет</b>\n Введите название или нажмите \"Отмена\"")
@@ -574,43 +453,16 @@ async def skip(query: CallbackQuery, state: FSMContext, session: AsyncSession):
             await state.update_data(chat_id=str(query.message.chat.id))
             data = await state.get_data()
             takes_time = data["first_take"]
-            takes_time = [dt + timedelta(days=2) for dt in takes_time]
-            if data["freq_per_day"] >= 1:
-                await state.update_data(first_take=takes_time[0])
-                if data["freq_per_day"] >= 2:
-                    await state.update_data(sec_take=takes_time[1])
-                    if data["freq_per_day"] >= 3:
-                        await state.update_data(third_take=takes_time[2])
-                        if data["freq_per_day"] >= 4:
-                            await state.update_data(four_take=takes_time[3])
-                            if data["freq_per_day"] >= 5:
-                                await state.update_data(five_take=takes_time[4])
-                                if data["freq_per_day"] == 6:
-                                    await state.update_data(six_take=takes_time[5])
-                                else:
-                                    await state.update_data(six_take=None)
-                            else:
-                                await state.update_data(five_take=None)
-                                await state.update_data(six_take=None)
-                        else:
-                            await state.update_data(four_take=None)
-                            await state.update_data(five_take=None)
-                            await state.update_data(six_take=None)
-                    else:
-                        await state.update_data(third_take=None)
-                        await state.update_data(four_take=None)
-                        await state.update_data(five_take=None)
-                        await state.update_data(six_take=None)
-                else:
-                    await state.update_data(sec_take=None)
-                    await state.update_data(third_take=None)
-                    await state.update_data(four_take=None)
-                    await state.update_data(five_take=None)
-                    await state.update_data(six_take=None)
+            takes_time = [dt + timedelta(days=45656) for dt in takes_time]
+
+            for i in range(6):
+                key = ["first_take", "sec_take", "third_take", "four_take", "five_take", "six_take"][i]
+                await state.update_data({key: takes_time[i] if data["freq_per_day"] > i else None})
+
             data1 = await state.get_data()
             await orm_pills_remind(session, data1)
-            await query.message.answer("✅Напоминание добавлено\n\n🔔Напоминания будут приходить в указанное время\n\n"
-                             "❕Уведомления приходят по (UTC/GMT +05:00) Asia/Yekaterinburg",
+            await query.message.answer("❗Ввод дополнительной информации пропущен\n\n"
+                                       "✅Напоминание добавлено\n\n🔔Напоминания будут приходить в указанное время",
                                  reply_markup=replies.start_kb())
             await state.clear()
         except Exception as e:
@@ -661,64 +513,28 @@ async def reminds_list(query: CallbackQuery, session: AsyncSession):
                                                'Удалить 🚮': f'delete_{remind.id}'}))
         for remind in await orm_get_reminds_pill(session):
             if int(remind.chat_id) == query.message.chat.id:
-                date = remind.day_start.strftime(f"%d.%m.%Y")
-                if remind.freq_per_day >= 1:
-                    time1 = remind.first_take.strftime(f"%H:%M")
-                    if remind.freq_per_day >= 2:
-                        time2 = remind.sec_take.strftime(f"%H:%M")
-                        if remind.freq_per_day >= 3:
-                            time3 = remind.third_take.strftime(f"%H:%M")
-                            if remind.freq_per_day >= 4:
-                                time4 = remind.four_take.strftime(f"%H:%M")
-                                if remind.freq_per_day >= 5:
-                                    time5 = remind.five_take.strftime(f"%H:%M")
-                                    if remind.freq_per_day >= 6:
-                                        time6 = remind.six_take.strftime(f"%H:%M")
-                if remind.freq_per_day == 1:
-                    await query.message.answer(f"<strong>💊Препарат: {remind.name}\n📋Прием {remind.freq_per_day} раз в день"
-                                               f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
-                                               f"\n⏰Время приема:\n1. {time1}\nℹ️Дополнительная информация: {remind.extra_inf}",
-                                               reply_markup=replies.get_btns(btns={
-                                                   'Удалить 🚮': f'delete_{remind.id}'}))
-                elif remind.freq_per_day == 2:
-                    await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
-                                               f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
-                                               f"\n⏰Время приема:\n1. {time1}\n2. {time2}"
-                                               f"\nℹ️Дополнительная информация: {remind.extra_inf}",
-                                               reply_markup=replies.get_btns(btns={
-                                                   'Удалить 🚮': f'delete_{remind.id}'}))
-                elif remind.freq_per_day == 3:
-                    await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
-                                               f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
-                                               f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}"
-                                               f"\nℹ️Дополнительная информация: {remind.extra_inf}",
-                                               reply_markup=replies.get_btns(btns={
-                                                   'Удалить 🚮': f'delete_{remind.id}'}))
-                elif remind.freq_per_day == 4:
-                    await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
-                                               f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
-                                               f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}"
-                                               f"\nℹ️Дополнительная информация: {remind.extra_inf}",
-                                               reply_markup=replies.get_btns(btns={
-                                                   'Удалить 🚮': f'delete_{remind.id}'}))
-                elif remind.freq_per_day == 5:
-                    await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
-                                               f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
-                                               f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}\n5. {time5}"
-                                               f"\nℹ️Дополнительная информация: {remind.extra_inf}",
-                                               reply_markup=replies.get_btns(btns={
-                                                   'Удалить 🚮': f'delete_{remind.id}'}))
-                elif remind.freq_per_day == 6:
-                    await query.message.answer(f"<strong>💊Препарат: {remind.name}\n🗓Прием {remind.freq_per_day} раз в день"
-                                               f" на протяжении {remind.freq_days} дней начиная с {date}</strong>"
-                                               f"\n⏰Время приема:\n1. {time1}\n2. {time2}\n3. {time3}\n4. {time4}\n5. {time5}\n6. {time6}"
-                                               f"\nℹ️Дополнительная информация: {remind.extra_inf}",
-                                               reply_markup=replies.get_btns(btns={
-                                                   'Удалить 🚮': f'delete_{remind.id}'}))
+                date = remind.day_start.strftime("%d.%m.%Y")
+                take_attrs = ["first_take", "sec_take", "third_take", "four_take", "five_take", "six_take"]
+                times = []
+                for i in range(remind.freq_per_day):
+                    time = await convert_from_yekaterinburg(session, remind.chat_id, getattr(remind, take_attrs[i]))
+                    times.append(time.strftime("%H:%M"))
+                text = (
+                    "каждый день" if remind.periodicity == 0 else
+                    "день через день" if remind.periodicity == 1 else
+                    f"с интервалом в {remind.interval} дней"
+                )
+                times_str = "\n".join([f"{i + 1}. {t}" for i, t in enumerate(times)])
+                await query.message.answer(
+                    f"<strong>💊Препарат: {remind.name}\n"
+                    f"🗓Прием {remind.freq_per_day} раз в день, <b>{text}</b> "
+                    f"на протяжении {remind.freq_days} дней начиная с {date}</strong>\n"
+                    f"⏰Время приема:\n{times_str}\n"
+                    f"ℹ️Дополнительная информация: {remind.extra_inf}",
+                    reply_markup=replies.get_btns(btns={'Удалить 🚮': f'delete_{remind.id}'})
+                )
         await query.message.answer("❗Список напоминаний представлен выше ⬆️"
-                                   "\n\n📝Для удаления напоминания нажмите на кнопку"
-                                   "\n\n❕Уведомления приходят по (UTC/GMT +05:00) Asia/Yekaterinburg, "
-                                   "но только для лекарств!",
+                                   "\n\n📝Для удаления напоминания нажмите на кнопку",
                                    reply_markup=replies.back_only_for_look_kb())
 
 
@@ -807,7 +623,7 @@ async def doctor_date_err(message: types.Message):
 
 
 @user_private_router.message(StateFilter(AddReminderDoctor.time), F.text)
-async def doctor_time(message: types.Message, state: FSMContext):
+async def doctor_time(message: types.Message, state: FSMContext, session: AsyncSession):
     message_text = message.text
     if len(message_text) <= 2:
         message_text = message_text.zfill(4)
@@ -820,7 +636,9 @@ async def doctor_time(message: types.Message, state: FSMContext):
         if len(hours_minutes[1]) == 2:
             chosen_hour = int(hours_minutes[0])
             chosen_minute = int(hours_minutes[1])
+            chat_id = str(message.chat.id)
             current_datetime = datetime.now()
+            current_datetime = await convert_from_yekaterinburg(session, chat_id, current_datetime)
             current_time = current_datetime.strftime(f"%H:%M")
             current_date = current_datetime.strftime(f"%d/%m/%Y")
             if (chosen_hour < 0) or (chosen_hour >= 24):
@@ -942,7 +760,7 @@ async def pills(query: CallbackQuery, state: FSMContext):
 async def pill_name(message: types.Message, state: FSMContext):
     if len(message.text) <= 100:
         await state.update_data(name=message.text)
-        await message.answer("🗓️<b>Сколько дней нужно принимать лекарство</b>", reply_markup=replies.back_cancel_kb())
+        await message.answer("🗓️<b>Сколько дней составляет продолжительность курса?</b>", reply_markup=replies.back_cancel_kb())
         await state.set_state(AddReminderPills.freq_days)
     else:
         await message.answer("❗Длина сообщения не может быть больше 100 символов"
@@ -955,11 +773,13 @@ async def pill_name_err(message: types.Message):
 
 
 @user_private_router.message(AddReminderPills.freq_days, F.text)
-async def pill_periodicity(message: types.Message, state: FSMContext):#
+async def pill_periodicity(message: types.Message, state: FSMContext):
     mess = message.text
     if mess.isdigit():
         if int(mess) == 1:
             await state.update_data(freq_days=int(mess))
+            await state.update_data(periodicity=int(0))
+            await state.update_data(interval=None)
             await message.answer("🗓️<b>Укажите день начала приема</b>",
                                        reply_markup=await SimpleCalendar(locale='ru_Ru').start_calendar())
             await state.set_state(AddReminderPills.day_start)
@@ -1000,7 +820,7 @@ async def pill_freq_days(query: CallbackQuery, callback_data: MyCallback, state:
         await state.update_data(periodicity=0)
     elif periodicity == "every_other_day":
         await state.update_data(periodicity=1)
-
+    await state.update_data(interval=None)
     await query.message.delete()
     await query.message.answer("🗓️<b>Укажите день начала приема</b>",
                          reply_markup=await SimpleCalendar(locale='ru_Ru').start_calendar())
@@ -1009,7 +829,7 @@ async def pill_freq_days(query: CallbackQuery, callback_data: MyCallback, state:
 
 @user_private_router.message(AddReminderPills.periodicity)
 async def pill_freq_days_err(message: types.Message):
-    await message.answer("❗Некорректный ввод данных\nУкажите количество <i>целым положительным числом</i>",
+    await message.answer("❗Некорректный ввод данных\nВыберите одну из кнопок",
                          reply_markup=replies.cancel_kb())
 
 
@@ -1063,8 +883,7 @@ async def pill_freq_per_day(message: types.Message, state: FSMContext):
         if 6 >= int(mess) > 0:
             await state.update_data(freq_per_day=int(message.text))
             await message.answer("1️⃣<b>Укажите время 1 приема</b>\n\n❗Вводить время нужно в формате ЧЧ:ММ"
-                                 "\nНапример, 11:30, 7:30, 0:30\n\n❕Время следует указывать в часовом поясе"
-                                 " (UTC/GMT +05:00) Asia/Yekaterinburg", reply_markup=replies.back_cancel_kb())
+                                 "\nНапример, 11:30, 7:30, 0:30", reply_markup=replies.back_cancel_kb())
             await state.set_state(AddReminderPills.first_take)
         if int(mess) > 6 or int(mess) <= 0:
             await message.answer("❗Количество приемов в день <b>не может</b> быть больше 6 или меньше 1"
@@ -1428,43 +1247,14 @@ async def pill_extra(message: types.Message, state: FSMContext, session: AsyncSe
             data = await state.get_data()
             takes_time = data["first_take"]
             takes_time = [dt + timedelta(days=45656) for dt in takes_time]
-            await message.answer(f"{takes_time}")
-            if data["freq_per_day"] >= 1:
-                await state.update_data(first_take=takes_time[0])
-                if data["freq_per_day"] >= 2:
-                    await state.update_data(sec_take=takes_time[1])
-                    if data["freq_per_day"] >= 3:
-                        await state.update_data(third_take=takes_time[2])
-                        if data["freq_per_day"] >= 4:
-                            await state.update_data(four_take=takes_time[3])
-                            if data["freq_per_day"] >= 5:
-                                await state.update_data(five_take=takes_time[4])
-                                if data["freq_per_day"] == 6:
-                                    await state.update_data(six_take=takes_time[5])
-                                else:
-                                    await state.update_data(six_take=None)
-                            else:
-                                await state.update_data(five_take=None)
-                                await state.update_data(six_take=None)
-                        else:
-                            await state.update_data(four_take=None)
-                            await state.update_data(five_take=None)
-                            await state.update_data(six_take=None)
-                    else:
-                        await state.update_data(third_take=None)
-                        await state.update_data(four_take=None)
-                        await state.update_data(five_take=None)
-                        await state.update_data(six_take=None)
-                else:
-                    await state.update_data(sec_take=None)
-                    await state.update_data(third_take=None)
-                    await state.update_data(four_take=None)
-                    await state.update_data(five_take=None)
-                    await state.update_data(six_take=None)
+
+            for i in range(6):
+                key = ["first_take", "sec_take", "third_take", "four_take", "five_take", "six_take"][i]
+                await state.update_data({key: takes_time[i] if data["freq_per_day"] > i else None})
+
             data1 = await state.get_data()
             await orm_pills_remind(session, data1)
-            await message.answer("✅Напоминание добавлено\n\n🔔Напоминания будут приходить в указанное время\n\n"
-                                 "❕Уведомления приходят по (UTC/GMT +05:00) Asia/Yekaterinburg",
+            await message.answer("✅Напоминание добавлено\n\n🔔Напоминания будут приходить в указанное время",
                                  reply_markup=replies.start_kb())
             await state.clear()
         except Exception as e:

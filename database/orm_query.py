@@ -23,22 +23,12 @@ async def convert_to_yekaterinburg(session, chat_id, dt):
     # Если часовой пояс найден — используем его, иначе берём Europe/Moscow
     user_tz = user_timezone.timezone if user_timezone else "Europe/Moscow"
 
-    # Логируем исходные данные
-    print(f"Исходное время (без tzinfo): {dt}")
-
     # Добавляем временную зону пользователя (если нет tzinfo)
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=ZoneInfo(user_tz))
 
-    # Логируем после добавления часового пояса
-    print(f"После добавления {user_tz}: {dt}")
-
     # Конвертируем в Asia/Yekaterinburg
     dt_yek = dt.astimezone(ZoneInfo("Asia/Yekaterinburg"))
-
-    # Логируем результат
-    print(f"После конвертации в Asia/Yekaterinburg: {dt_yek}")
-
     return dt_yek
 
 
@@ -111,8 +101,6 @@ async def orm_pills_remind( session: AsyncSession, data: dict):
     five_take1 = await convert_to_yekaterinburg(session, chat_id, data["five_take"]) if data["five_take"] is not None else None
     six_take1 = await convert_to_yekaterinburg(session, chat_id, data["six_take"]) if data["six_take"] is not None else None
 
-
-
     first_take1 = first_take1.replace(tzinfo=None) if first_take1 is not None else None
     sec_take1 = sec_take1.replace(tzinfo=None) if sec_take1 is not None else None
     third_take1 = third_take1.replace(tzinfo=None) if third_take1 is not None else None
@@ -125,6 +113,7 @@ async def orm_pills_remind( session: AsyncSession, data: dict):
         name=data["name"],
         freq_days=data["freq_days"],
         periodicity=data["periodicity"],
+        interval=data["interval"],
         day_start=data["day_start"],
         freq_per_day=data["freq_per_day"],
         first_take=first_take1,
@@ -139,8 +128,8 @@ async def orm_pills_remind( session: AsyncSession, data: dict):
     session.add(obj)
     await session.commit()
 
-    from datetime import timedelta, datetime
-
+    periodicity = data.get("periodicity")
+    interval = data.get("interval")
     # Формируем список приёмов (предполагается, что obj.first_take всегда задан)
     takes = []
     if obj.first_take is not None:
@@ -171,8 +160,15 @@ async def orm_pills_remind( session: AsyncSession, data: dict):
             else:
                 all_remind.is_it_last = 0
             session.add(all_remind)
-        # Переходим к следующему дню
-        data["day_start"] += timedelta(days=1)
+
+        # Переходим к следующему дню с учётом periodicity
+        if periodicity == 0:
+            data["day_start"] += timedelta(days=1)
+        elif periodicity == 1:
+            data["day_start"] += timedelta(days=2)
+        elif periodicity == 2:
+            data["day_start"] += timedelta(days=interval+1)
+
     await session.commit()
 
 
@@ -189,7 +185,15 @@ async def orm_get_reminds_pill(session: AsyncSession):
 
 
 async def orm_get_reminds_all(session: AsyncSession):
-    query = select(AllRemind)
+    now = datetime.now().replace(second=0, microsecond=0)
+    next_minute = now + timedelta(minutes=1)
+
+    query = (
+        select(AllRemind)
+        .where(AllRemind.date_time.between(now, next_minute))  # Берем напоминания за ближайшую минуту
+        .order_by(AllRemind.date_time.asc())  # Сортируем по времени
+    )
+
     result = await session.execute(query)
     return result.scalars().all()
 
