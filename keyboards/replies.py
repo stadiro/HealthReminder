@@ -70,7 +70,7 @@ def skip_bk_cl_kb():
         InlineKeyboardButton(text="Отмена ↩️", callback_data=MyCallback(name="cancel").pack()),
     )
     builder.row(
-        InlineKeyboardButton(text="Пропустить ➡️", callback_data=MyCallback(name="skip").pack()),
+        InlineKeyboardButton(text="Без доп. информации ➡️", callback_data=MyCallback(name="skip").pack()),
     )
     return builder.as_markup()
 

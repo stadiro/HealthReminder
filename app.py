@@ -23,7 +23,6 @@ async def on_startup():
     run_param = False
     if run_param:
         await drop_db()
-
     await create_db()
 
 
