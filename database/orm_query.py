@@ -8,7 +8,7 @@ from datetime import datetime
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
+#g
 async def convert_to_yekaterinburg(session, chat_id, dt):
 
     result = await session.execute(select(UserTimezone).where(UserTimezone.chat_id == chat_id))
