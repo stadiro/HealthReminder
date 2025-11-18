@@ -29,7 +29,6 @@ from inline_cal.schemas import SimpleCalendarCallback
 from keyboards import replies
 from keyboards.replies import MyCallback
 
-
 load_dotenv(find_dotenv())
 bot = Bot(token=os.getenv('TOKEN'), default=DefaultBotProperties(parse_mode=ParseMode.HTML))  # токен ботика
 user_private_router = Router()
