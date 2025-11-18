@@ -32,7 +32,7 @@ async def orm_doctor_remind(session: AsyncSession, data: dict):
     date_yekaterinburg = date_yekaterinburg.replace(tzinfo=None)
     time_yekaterinburg = time_yekaterinburg.replace(tzinfo=None)
     sec_time_yekaterinburg = sec_time_yekaterinburg.replace(tzinfo=None)
-
+ 
     pk = PKTable(
         name=data["speciality"]
     )
